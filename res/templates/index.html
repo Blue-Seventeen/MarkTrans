@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Obsidian to WeChat Converter</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h2>配置</h2>
+                <a href="/admin" style="font-size: 14px; text-decoration: none; color: #07c160;">管理数据库</a>
+            </div>
+            <div class="form-group">
+                <label for="filePath">Markdown 文件路径 (可选):</label>
+                <input type="text" id="filePath" placeholder="例如: G:\MyNotes\Post.md">
+            </div>
+            <div class="form-group">
+                <label for="imageDir">本地图片根目录 (可选, 默认同文件目录):</label>
+                <input type="text" id="imageDir" placeholder="例如: G:\MyNotes\Attachments">
+            </div>
+            <div class="form-group">
+                <button id="translateBtn" class="btn-primary">读取并转换</button>
+            </div>
+            
+            <h3>或直接输入 Markdown</h3>
+            <textarea id="markdownInput" placeholder="在此粘贴 Obsidian 内容..."></textarea>
+        </div>
+        
+        <div class="preview-area">
+            <div class="preview-header">
+                <h3>微信公众号预览</h3>
+            </div>
+            <div id="previewContent" class="wechat-content">
+                <!-- Rendered HTML will appear here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('translateBtn').addEventListener('click', async () => {
+            const content = document.getElementById('markdownInput').value;
+            const filePath = document.getElementById('filePath').value;
+            const imageDir = document.getElementById('imageDir').value;
+            
+            const response = await fetch('/api/translate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ content, filePath, imageDir })
+            });
+            
+            const data = await response.json();
+            if (data.error) {
+                alert('Error: ' + data.error);
+                return;
+            }
+            
+            document.getElementById('previewContent').innerHTML = data.html;
+            
+            // If file was loaded, update textarea
+            if (data.loadedContent) {
+                document.getElementById('markdownInput').value = data.loadedContent;
+            }
+        });
+    </script>
+</body>
+</html>
