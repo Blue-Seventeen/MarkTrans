@@ -1,3 +1,4 @@
+
 import sqlite3
 import os
 
@@ -42,15 +43,19 @@ def init_db():
     ''')
 
     # Table 3: Mapping-Rule
+    # Updated to match the new schema requirements
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS mapping_rule (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             style_id INTEGER,
-            base_id INTEGER,
-            match_pattern TEXT,
-            replace_result TEXT,
+            style_rule_name TEXT UNIQUE,
+            ast_input TEXT,
+            matching_rule TEXT,
+            html_output TEXT,
+            render_name TEXT,
+            weight INTEGER DEFAULT 0,
             FOREIGN KEY (style_id) REFERENCES mapping_style (id),
-            FOREIGN KEY (base_id) REFERENCES mapping_base (id),
-            PRIMARY KEY (style_id, base_id)
+            UNIQUE(style_rule_name)
         )
     ''')
 
@@ -78,7 +83,6 @@ def init_db():
             (34, '行内代码', '`code`', 'Inline', 30),
             (35, '代码块', '```code```', 'Block', 26),
             (38, '表格', '|---|', 'Block', 8),
-            # Add more as needed based on the Read output, keeping it functional for now
         ]
         cursor.executemany('INSERT INTO mapping_base (id, element_name, element_description, element_category, weight) VALUES (?, ?, ?, ?, ?)', base_data)
 
@@ -93,30 +97,33 @@ def init_db():
     cursor.execute('SELECT count(*) FROM mapping_rule')
     if cursor.fetchone()[0] == 0:
         # Default rules (Style 1)
-        # Regex patterns adapted from common markdown parsers and the user's hint
+        # Regex patterns adapted from common markdown parsers
+        # Updated columns: style_id, base_id, matching_rule, html_output
         rule_data = [
-            (1, 1, r'^#\s+(.*)$', r'<h1>\1</h1>'),
-            (1, 2, r'^##\s+(.*)$', r'<h2>\1</h2>'),
-            (1, 3, r'^###\s+(.*)$', r'<h3>\1</h3>'),
-            (1, 4, r'^####\s+(.*)$', r'<h4>\1</h4>'),
-            (1, 5, r'^#####\s+(.*)$', r'<h5>\1</h5>'),
-            (1, 6, r'^######\s+(.*)$', r'<h6>\1</h6>'),
-            (1, 7, r'\*\*(.*?)\*\*', r'<strong>\1</strong>'),
-            (1, 8, r'\*(.*?)\*', r'<em>\1</em>'),
-            (1, 9, r'~~(.*?)~~', r'<del>\1</del>'),
-            (1, 10, r'==(.*?)==', r'<mark>\1</mark>'),
-            (1, 13, r'\[(.*?)\]\((.*?)\)', r'<a href="\2">\1</a>'),
-            (1, 15, r'!\[(.*?)\]\((.*?)\)', r'<img src="\2" alt="\1">'),
-            (1, 16, r'(^> .*$\n)+', '__BLOCKQUOTE_HANDLER__'),
-            (1, 33, r'^---$', r'<hr>'),
-            (1, 34, r'`(.*?)`', r'<code>\1</code>'),
-            (1, 35, r'```(\w+)?\n([\s\S]*?)```', r'<pre><code class="language-\1">\2</code></pre>'),
-            (1, 38, r'(^\|.*\|$\n)+', '__TABLE_HANDLER__'),
-             # Simple list handling (might need complex handler for nested lists, but using regex for simple cases)
-            (1, 30, r'^\s*-\s+(.*)$', r'<li>\1</li>'), 
-            (1, 31, r'^\s*\d+\.\s+(.*)$', r'<li>\1</li>'),
+            (1, 'heading_h1', '', r'^#\s+(.*)$', r'<h1>\1</h1>', 'render_heading', 100),
+            (1, 'heading_h2', '', r'^##\s+(.*)$', r'<h2>\1</h2>', 'render_heading', 99),
+            (1, 'heading_h3', '', r'^###\s+(.*)$', r'<h3>\1</h3>', 'render_heading', 98),
+            (1, 'heading_h4', '', r'^####\s+(.*)$', r'<h4>\1</h4>', 'render_heading', 97),
+            (1, 'heading_h5', '', r'^#####\s+(.*)$', r'<h5>\1</h5>', 'render_heading', 96),
+            (1, 'heading_h6', '', r'^######\s+(.*)$', r'<h6>\1</h6>', 'render_heading', 95),
+            (1, 'inline_strong', '', r'\*\*(.*?)\*\*', r'<strong>\1</strong>', 'render_strong', 90),
+            (1, 'inline_em', '', r'\*(.*?)\*', r'<em>\1</em>', 'render_italic', 89),
+            (1, 'inline_del', '', r'~~(.*?)~~', r'<del>\1</del>', 'render_del', 88),
+            (1, 'inline_mark', '', r'==(.*?)==', r'<mark>\1</mark>', 'render_mark', 87),
+            (1, 'inline_link', '', r'\[(.*?)\]\((.*?)\)', r'<a href="\2">\1</a>', 'render_link', 86),
+            (1, 'inline_image', '', r'!\[(.*?)\]\((.*?)\)', r'<img src="\2" alt="\1">', 'render_image', 85),
+            (1, 'block_quote', '', r'(^> .*$\n)+', '__BLOCKQUOTE_HANDLER__', 'render_blockquote', 80),
+            (1, 'block_hr', '', r'^---$', r'<hr>', 'render_hr', 79),
+            (1, 'inline_code', '', r'`(.*?)`', r'<code>\1</code>', 'render_codespan', 78),
+            (1, 'block_code', '', r'```(\w+)?\n([\s\S]*?)```', r'<pre><code class="language-\1">\2</code></pre>', 'render_codeblock', 77),
+            (1, 'block_table', '', r'(^\|.*\|$\n)+', '__TABLE_HANDLER__', 'render_table', 76),
+            (1, 'list_unordered', '', r'^\s*-\s+(.*)$', r'<li>\1</li>', 'render_list_item', 75),
+            (1, 'list_ordered', '', r'^\s*\d+\.\s+(.*)$', r'<li>\1</li>', 'render_list_item', 74),
         ]
-        cursor.executemany('INSERT INTO mapping_rule (style_id, base_id, match_pattern, replace_result) VALUES (?, ?, ?, ?)', rule_data)
+        cursor.executemany(
+            'INSERT INTO mapping_rule (style_id, style_rule_name, ast_input, matching_rule, html_output, render_name, weight) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            rule_data
+        )
 
     conn.commit()
     conn.close()

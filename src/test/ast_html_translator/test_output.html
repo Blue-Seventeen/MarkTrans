@@ -1,0 +1,166 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown AST to HTML Test</title>
+    <link rel="stylesheet" href="../../../res/static/style.css">
+    <style>
+        /* Override global styles that might affect layout */
+        body { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            padding: 20px; 
+            font-family: system-ui;
+            /* Fix: Override flex display from style.css */
+            display: block !important; 
+            height: auto !important;
+            overflow: auto !important;
+        }
+        .callout { border: 1px solid #ddd; padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .callout-title { font-weight: bold; margin-bottom: 5px; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ccc; padding: 8px; }
+        pre { background: #f4f4f4; padding: 10px; overflow-x: auto; }
+        blockquote { border-left: 4px solid #ddd; margin: 0; padding-left: 10px; color: #666; }
+    </style>
+</head>
+<body>
+    <h1>Markdown Translation Result</h1>
+    <hr>
+    ```cardlink
+url: http://127.0.0.1:7000/admin
+title: &quot;数据库管理 - Obsidian to WeChat&quot;
+host: 127.0.0.1
+```
+
+<table>
+${header}
+${body}
+</table>
+<code>console.log(123);</code>
+<table>
+${header}
+${body}
+</table>
+<pre><code class="language-${lang}">```bash
+123
+```</code></pre>
+<table>
+${header}
+${body}
+</table>
+
+<div class="callout callout-note">
+    <div class="callout-title">
+        <div class="callout-icon"></div>
+        <div class="callout-title-inner">Title</div>
+    </div>
+    <div class="callout-content">
+        <blockquote>
+<h1 id=""> Contents</h1>
+</blockquote>
+    </div>
+</div>
+
+<table>
+${header}
+${body}
+</table>
+
+<div class="callout callout-tip">
+    <div class="callout-title">
+        <div class="callout-icon"></div>
+        <div class="callout-title-inner">abstract</div>
+    </div>
+    <div class="callout-content">
+        <blockquote>
+<h1 id="">123</h1>
+</blockquote>
+    </div>
+</div>
+
+<table>
+${header}
+${body}
+</table>
+<blockquote>
+<h1 id=""> 123</h1>
+</blockquote>
+<table>
+${header}
+${body}
+</table>
+<ol>
+<li><input type="checkbox" disabled > <h1 id="">1234</h1></li>
+<li><input type="checkbox" disabled checked> <h1 id="">芜湖</h1></li>
+<li><h1 id="">123</h1></li>
+<li><h1 id="">123</h1></li>
+<li><h1 id="">123</h1></li>
+<li><h1 id="">123</h1></li>
+<li><h1 id="">123</h1></li>
+</ol>
+<table>
+${header}
+${body}
+</table>
+<table>
+<thead><tr><th style="text-align: left">H1</th><th style="text-align: center">H2</th><th style="text-align: right">H3</th></tr></thead>
+<tbody>
+<tr><td style="text-align: left">C1</td><td style="text-align: center">C2</td><td style="text-align: right">|
+C3</td></tr>
+</tbody>
+</table>
+<table>
+${header}
+${body}
+</table>
+<table>
+${header}
+${body}
+</table>
+<strong>一级标题</strong>
+<strong>二级标题</strong>
+<strong>三级标题</strong>
+<strong>四级标题</strong>
+<strong>五级标题</strong>
+<strong>六级标题</strong>
+<table>
+${header}
+${body}
+</table>
+---
+
+<table>
+${header}
+${body}
+</table>
+<h1 id="">这是一个简单的文本段落
+这是第二行</h1>
+<table>
+${header}
+${body}
+</table>
+<strong>这是第三行[^1]</strong>
+<table>
+${header}
+${body}
+</table>
+<table>
+${header}
+${body}
+</table>
+ 这个是个很正常的脚注
+这一行是告诉你脚注前面可以空行
+    123
+    123
+
+<table>
+${header}
+${body}
+</table>
+<h1 id="">以下内容属于行内格式，比如\`这个是被注释的代码块\`，不会生效。再比如这个是行内代码块 `code=123`。又比如这个是行内注释%%123%%注释中的内容就不会显示。![[03 - Area/03 - 通识基础 - Basic Knowledge/计算机编程/02 - 计算机编程 - 学习笔记/计算机编程 - HTML & CSS & JavaScript/03 - 前端技术 - 资源仓库/00 - 资源仓库 - 待归档内容/03 - 前端技术 - 附件资源/00 - 资源仓库 - 待归档内容/0501 - 前端模板归档/03 - 登录页面/登入页面/1.png]]123。这个是外部图片引入![百度](http://www.baiud.com)虽然没啥用。这个是 Wiki Link [[01-占领桌面.py]]，点一下就能跳过去。还有外部链接[百度](http://www.baidu.com)这个点一下会打开浏览器跳过去。下面开始介绍一些行内格式，比如**粗体**，又比如*斜体*，再比如~~删除线~~，又或者是==高亮==。</h1>
+</body>
+</html>
+    

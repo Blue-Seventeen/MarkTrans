@@ -1,0 +1,9 @@
+#################################################### 数据库字段分析
+id: 主键，自动递增
+style_id: 样式 ID，用于关联 database.db 中的 MappingStyle 表
+style_rule_name: 样式规则名称
+ast_input : AST 的输入案例
+matching_rule : 若检测到的 AST 符合此规则，则将 AST 节点转换为对应的 html_output 节点
+html_output : 渲染后的结果案例，占位符 §token['tokens']§
+render_name: 用于处理渲染的方法名称
+weight: 权重信息（用于排序，权重按照 style_id 分组，不同的 style_id 权重互不影响）

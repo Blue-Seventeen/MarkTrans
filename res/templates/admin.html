@@ -197,7 +197,7 @@
         let tableSchema = {
             'mapping_base': ['id', 'element_name', 'element_name_en', 'element_description', 'element_category', 'weight', 'ast_example_input', 'ast_example_output', 'element_regex_rule', 'element_handler_name'],
             'mapping_style': ['id', 'style_name', 'is_active', 'is_deletable', 'remark'],
-            'mapping_rule': ['style_id', 'base_id', 'match_pattern', 'replace_result']
+            'mapping_rule': ['id', 'style_id', 'style_rule_name', 'ast_input', 'matching_rule', 'html_output', 'render_name', 'weight']
         };
 
         const tableSelect = document.getElementById('tableSelect');
@@ -241,12 +241,7 @@
                 });
                 
                 // Keys for delete/edit
-                let keyAttr = '';
-                if (currentTable === 'mapping_rule') {
-                    keyAttr = `data-style-id="${row.style_id}" data-base-id="${row.base_id}"`;
-                } else {
-                    keyAttr = `data-id="${row.id}"`;
-                }
+                let keyAttr = `data-id="${row.id}"`;
                 
                 html += `
                     <td class="actions">
@@ -302,23 +297,14 @@
                 let value = rowData ? rowData[field] : '';
                 let readOnly = '';
                 
-                // If editing, PK might be read-only depending on logic. 
-                // For simplicity, let's allow editing all but ID if auto-increment.
-                // mapping_base/style have auto-inc ID.
-                if (isEditing && field === 'id' && currentTable !== 'mapping_rule') {
+                // If editing, ID should be read-only
+                if (isEditing && field === 'id') {
                     readOnly = 'readonly style="background-color: #eee"';
                 }
                 
-                // mapping_rule PK is composite (style_id, base_id). If editing, we shouldn't change PK easily or use it to identify.
-                // My update API uses the PK to find the row. So if we change PK in form, we need to know the ORIGINAL PK.
-                // For now, let's make PKs readonly during Edit for simplicity.
-                if (isEditing && currentTable === 'mapping_rule' && (field === 'style_id' || field === 'base_id')) {
-                    readOnly = 'readonly style="background-color: #eee"';
-                }
-
                 let inputHtml = '';
                 // Updated list of fields that should be TextAreas
-                const textAreaFields = ['element_description', 'replace_result', 'remark', 'match_pattern', 'ast_example_input', 'ast_example_output', 'element_regex_rule'];
+                const textAreaFields = ['element_description', 'html_output', 'remark', 'matching_rule', 'ast_input', 'ast_example_input', 'ast_example_output', 'element_regex_rule'];
                 if (textAreaFields.includes(field)) {
                     inputHtml = `<textarea name="${field}" rows="3" ${readOnly}>${value === null ? '' : escapeHtml(String(value))}</textarea>`;
                 } else {
@@ -349,20 +335,10 @@
             
             if (isEditing) {
                 url += '/update';
-                // Construct payload for update
-                if (currentTable === 'mapping_rule') {
-                    // We need original IDs to identify row. Since we made them readonly, data has them.
-                    payload = {
-                        style_id: data.style_id,
-                        base_id: data.base_id,
-                        updates: data
-                    };
-                } else {
-                    payload = {
-                        id: data.id,
-                        updates: data
-                    };
-                }
+                payload = {
+                    id: data.id,
+                    updates: data
+                };
             }
             
             const response = await fetch(url, {
@@ -384,13 +360,7 @@
             if (!confirm('确定要删除这条记录吗？')) return;
             
             const row = currentData[index];
-            let payload = {};
-            
-            if (currentTable === 'mapping_rule') {
-                payload = { style_id: row.style_id, base_id: row.base_id };
-            } else {
-                payload = { id: row.id };
-            }
+            let payload = { id: row.id };
             
             const response = await fetch(`/api/db/${currentTable}/delete`, {
                 method: 'POST',
@@ -408,14 +378,6 @@
 
         // Initial load
         loadTableData();
-        
-        // Close modal when clicking outside - DISABLED by user request
-        // window.onclick = function(event) {
-        //    const modal = document.getElementById('editModal');
-        //    if (event.target == modal) {
-        //        closeModal();
-        //    }
-        // }
     </script>
 </body>
 </html>

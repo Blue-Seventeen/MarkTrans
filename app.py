@@ -35,6 +35,8 @@ def get_table_data(table_name):
     query = f"SELECT * FROM {table_name}"
     if table_name == 'mapping_base':
         query += " ORDER BY weight DESC"
+    elif table_name == 'mapping_rule':
+        query += " ORDER BY style_id ASC, weight DESC"
         
     cursor.execute(query)
     rows = cursor.fetchall()
@@ -80,16 +82,21 @@ def delete_table_row(table_name):
     
     try:
         if table_name == 'mapping_rule':
-            # Composite key
-            style_id = data.get('style_id')
-            base_id = data.get('base_id')
-            cursor.execute(f"DELETE FROM {table_name} WHERE style_id=? AND base_id=?", (style_id, base_id))
+            id_val = data.get('id')
+            if id_val is not None:
+                cursor.execute(f"DELETE FROM {table_name} WHERE id=?", (id_val,))
+            else:
+                style_id = data.get('style_id')
+                style_rule_name = data.get('style_rule_name')
+                cursor.execute(f"DELETE FROM {table_name} WHERE style_id=? AND style_rule_name=?", (style_id, style_rule_name))
         else:
-            # Single ID
             id_val = data.get('id')
             cursor.execute(f"DELETE FROM {table_name} WHERE id=?", (id_val,))
-            
+
         conn.commit()
+        if cursor.rowcount == 0:
+            conn.close()
+            return jsonify({'error': 'Record not found'}), 404
     except Exception as e:
         conn.close()
         return jsonify({'error': str(e)}), 500
@@ -108,6 +115,12 @@ def update_table_row(table_name):
     if not updates:
         return jsonify({'error': 'No updates provided'}), 400
 
+    updates = dict(updates)
+    if table_name == 'mapping_rule':
+        updates.pop('id', None)
+        if not updates:
+            return jsonify({'error': 'No updatable fields provided'}), 400
+
     set_clause = ', '.join([f"{k}=?" for k in updates.keys()])
     values = list(updates.values())
     
@@ -116,19 +129,25 @@ def update_table_row(table_name):
     
     try:
         if table_name == 'mapping_rule':
-            # Composite key identifier
-            style_id = data.get('style_id')
-            base_id = data.get('base_id')
-            values.append(style_id)
-            values.append(base_id)
-            cursor.execute(f"UPDATE {table_name} SET {set_clause} WHERE style_id=? AND base_id=?", values)
+            id_val = data.get('id')
+            if id_val is not None:
+                values.append(id_val)
+                cursor.execute(f"UPDATE {table_name} SET {set_clause} WHERE id=?", values)
+            else:
+                style_id = data.get('style_id')
+                style_rule_name = data.get('style_rule_name')
+                values.append(style_id)
+                values.append(style_rule_name)
+                cursor.execute(f"UPDATE {table_name} SET {set_clause} WHERE style_id=? AND style_rule_name=?", values)
         else:
-            # Single ID identifier
             id_val = data.get('id')
             values.append(id_val)
             cursor.execute(f"UPDATE {table_name} SET {set_clause} WHERE id=?", values)
-            
+
         conn.commit()
+        if cursor.rowcount == 0:
+            conn.close()
+            return jsonify({'error': 'Record not found'}), 404
     except Exception as e:
         conn.close()
         return jsonify({'error': str(e)}), 500

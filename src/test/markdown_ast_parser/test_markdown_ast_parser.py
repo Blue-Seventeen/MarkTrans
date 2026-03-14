@@ -105,12 +105,17 @@ class MarkdownASTParserTest(MarkdownASTParser):
         return self.normalize_output(tokens) 
 
 if __name__ == "__main__":
-    content = """# 123"""
-    # 从 sqlite 数据库中读取规则
     parser = MarkdownASTParserTest(db_path = r'../../../res/database.db')
-    ast = parser.parse_test02(content)
-    # 打印 JSON 结果
-      # ast: 要序列化的 AST 树
-      # indent: 缩进空格数，每层嵌套缩进 2 个空格，形成层级结构
-      # ensure_ascii=False: 确保非 ASCII 字符正常显示，避免编码问题，当为 True 时，中文会以 \uXXXX 编码显示
-    print(json.dumps(ast, indent=2, ensure_ascii=False))
+
+    base_dir = os.path.dirname(__file__)
+    with open(os.path.join(base_dir, "test_total.md"), "r", encoding="utf-8") as f:
+        content = f.read()
+
+    # print("========== Origion Text ==========")
+    # print(content)
+
+    result = parser.parse(content)
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+
+    with open(os.path.join(base_dir, "test_total.md"), "a", encoding="utf-8") as f:
+        f.write(json.dumps(result[0], ensure_ascii=False, indent=2))
