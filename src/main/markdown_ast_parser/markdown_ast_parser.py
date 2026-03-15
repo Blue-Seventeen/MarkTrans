@@ -82,7 +82,7 @@ class MarkdownASTParser:
     def __init__(self, db_path):
         """
         初始化解析器
-        :param db_path: 才能出解析规则的 SQlite 数据路径
+        :param db_path: 存储解析规则的 SQlite 数据库路径
         """
         self.db_path = db_path    # 规则数据库路径
         self.block_rules = []     # 存储所有块级元素的解析规则（如段落、列表、代码块）
@@ -109,7 +109,8 @@ class MarkdownASTParser:
 
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-
+        
+        rows = []
         try:
             # 查询 mapping_base 表，获取所有规则配置
             cursor.execute('SELECT element_name_en, element_regex_rule, element_handler_name, element_category, weight FROM mapping_base ORDER BY weight DESC')

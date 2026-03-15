@@ -9,15 +9,104 @@
 1. 在 `mapping_rule` 中编写对应的 matching_rule 与对应的 render_name
 2. 在本脚本中添加对应的 _render_§render_name§ 渲染规则即可
 """
+import re
+import ast
+import sys
 import html
+import json
+import sqlite3
 
+# -------------------------------------------------------------------------------------------- #
+#                                           全局配置                                            #
+# -------------------------------------------------------------------------------------------  #
+# 设置更高的递归限制，防止在解析深层嵌套的 AST（如多层列表或引用）时报错
+sys.setrecursionlimit(2000)
+# _safe_eval_rule 执行 Bool 表达式判断时，只允许使用以下节点
+ALLOWED_NODES = (
+    ast.Expression,      # 根节点（eval 模式）
+    ast.BoolOp, ast.And, ast.Or,  # 布尔运算：and / or
+    ast.UnaryOp, ast.Not,         # 一元运算：not
+    ast.Compare,                  # 比较运算
+    ast.Eq, ast.NotEq,            # ==, !=
+    ast.In, ast.NotIn,            # in, not in
+    ast.Gt, ast.GtE, ast.Lt, ast.LtE,  # >, >=, <, <=
+    ast.Name, ast.Load,           # 变量名及其读取操作
+    ast.Constant,                 # 常量（数字、字符串等）
+    ast.Subscript, ast.Index, ast.Slice,  # 下标访问：token["key"]
+    ast.List, ast.Tuple,          # 列表、元组字面量
+    ast.Call, ast.Attribute       # 仅允许受控方法调用（如 .lower()）
+)
+
+# -------------------------------------------------------------------------------------------- #
+#                                    核心类 - ASTHtmlTranslator                                 #
+# -------------------------------------------------------------------------------------------  #
 class ASTHtmlTranslator:
     """
     AST HTML 转换器
     将 MarkdownASTParser 解析生成的 AST JSON 转换为 HTML 代码
     """
-    def __init__(self):
-        pass
+    def __init__(self, db_path):
+        """
+        初始化转换器
+        :param db_path: 存储解析规则的 SQlite 数据库路径
+        """
+        self.db_path = db_path     # 规则数据库路径
+        self.mapping_rules = []    # 存放所有映射规则 [{}]
+        self.load_rules_from_db(db_path = self.db_path)  # 从数据库加载解析规则
+    
+    def load_rules_from_db(self, db_path = None):
+        """
+        从数据库加载转换规则，存放到 self.mapping_rules 中
+        :param db_path: 数据库路径
+        :return 
+        格式: 
+        [
+            {
+                'style_rule_name' : style_rule_name,     // 对应格式的样式规则名称，此字段唯一
+                'weight' : weight,                       // 对应格式的权重，数值越大越优先处理
+                'matching_rule' : matching_rule,         // 对应格式的匹配表达式
+                'html_output' : html_output,             // 对应格式的 HTML 输出
+                'render_name' : render_name              // 对应格式的渲染函数名，用于处理匹配到的文本
+            },
+            ...
+        ]
+        """
+        self.mapping_rules = []
+        rows = []
+        style_id = 1
+
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            # 1. 从 mapping_style 表中查询 is_active = 1 的样式，并获取其 style_id
+            cursor.execute('SELECT id FROM mapping_style WHERE is_active = 1 ORDER BY id LIMIT 1')
+            active_style = cursor.fetchone()
+            if active_style is not None:
+                style_id = active_style[0]
+            # 2. 根据 style_id 从 mapping_rule 表中查询所有规则配置
+            cursor.execute('SELECT style_rule_name, weight, matching_rule, html_output, render_name FROM mapping_rule WHERE style_id = ? ORDER BY weight DESC', (style_id,))
+            rows = cursor.fetchall()
+        except Exception as e:
+            print(f"Error loading rules from DB: {e}", file=sys.stderr)
+        finally:
+            try:
+                conn.close()
+            except Exception:
+                pass
+        
+        # 3. 遍历查询结果，构建规则字典
+        for row in rows:
+            style_rule_name, weight, matching_rule, html_output, render_name = row
+            self.mapping_rules.append({
+                'style_rule_name' : style_rule_name,
+                'weight' : weight,
+                'matching_rule' : matching_rule,
+                'html_output' : html_output,
+                'render_name' : render_name
+            })
+        
+        # 4. 再次按权重排序降序排序，确保顺序正确
+        self.mapping_rules.sort(key=lambda x: x['weight'], reverse=True)
 
     def translate(self, ast_tokens):
         """
@@ -25,306 +114,322 @@ class ASTHtmlTranslator:
         :param ast_tokens: AST 节点列表 (List[Dict])
         :return: 生成的 HTML 字符串
         """
-        if not ast_tokens:
-            return ""
-        
-        html_parts = []
+        html_output = "" # 存储最终生成的 HTML 字符串
+        # 1. 预处理，将 AST JSON 格式转换为符合 Python 要求的字典与列表
+        if isinstance(ast_tokens, str):
+            ast_tokens = json.loads(ast_tokens)
+
+        # 2. 遍历 AST 节点列表，根据规则进行转换
         for token in ast_tokens:
-            html_parts.append(self._dispatch(token))
-        return '\n'.join(html_parts)
+            ## 2.1 获取 token 类型
+            token_type = token.get('type')
+            if not token_type:
+                continue
 
-    def _dispatch(self, token):
-        """
-        根据 token 的 type 分发到对应的渲染函数
-        """
-        token_type = token.get('type')
-        if not token_type:
-            return ""
+            ## 2.2 从 self.mapping_rules 中定位对应的 rule 组成 rule_list 一同传递过去
+            rule_list = [rule for rule in self.mapping_rules if rule['render_name'] == token_type]
 
-        # 动态查找处理方法，例如 type="heading" -> _render_heading
-        handler_name = f"_render_{token_type}"
-        handler = getattr(self, handler_name, self._render_default)
-        return handler(token)
+            ## 2.2 将 token, matching_rule 和 html_output 传递给对应的渲染函数
+            render_func = getattr(self, f'_render_{token_type}')
+            html_output += render_func(token, rule_list)
+        
+        return html_output
+
+    # -------------------------------------------------------------------------------------------- #
+    #                                         字符串代码执行逻辑                                      #
+    # -------------------------------------------------------------------------------------------- #
+
+    def _save_eval_rule(self, expr: str, token: dict) -> bool:
+        """
+        评估表达式是否匹配当前 token，应付 token['type'] == 'escape' 时的特殊情况
+        :param expr: 匹配表达式
+        :param token: 当前 AST 节点
+        :return: 是否匹配
+        """
+        # 1. 基础校验：空表达式或过长表达式直接拒绝
+        if not expr or len(expr) > 1024:
+            return False
+        
+        # 2. 解析为 AST, mode='eval' 表示单表达式模式
+        tree = ast.parse(expr, mode="eval")
+
+        # 3. 遍历所有节点，检查是否在白名单中
+        global ALLOWED_NODES
+        for node in ast.walk(tree):
+            # 3.1 发现危险节点，直接拒绝执行
+            if not isinstance(node, ALLOWED_NODES):
+                return False 
+        
+            # 3.2 额外限制：变量名只能是 "token"
+            if isinstance(node, ast.Name) and node.id != 'token':
+                return False # 发现非 "token" 变量名，拒绝执行
+
+            # 3.3 仅允许访问属性 lower
+            if isinstance(node, ast.Attribute):
+                if node.attr != 'lower':
+                    return False
+
+            # 3.4 仅允许无参数调用 .lower()
+            if isinstance(node, ast.Call):
+                if not isinstance(node.func, ast.Attribute):
+                    return False
+                if node.func.attr != 'lower':
+                    return False
+                if node.args or node.keywords:
+                    return False
+        
+        # 4. 编译并通过 eval 执行，但完全隔离执行环境
+        try:
+            code = compile(tree, "<rule>", "eval")
+            return bool(eval(code, {"__builtins__": {}}, {"token": token}))
+        except Exception:
+            return False
+
+    def _save_get_token(self, expr: str, token: dict) -> str:
+        """
+        安全的获取 token 中的 text 字段，应付 	§token['text']§
+        :param expr: 表达式
+        :param token: 当前 AST 节点
+        :return: 表达式求值结果
+        """
+        return eval(expr, {"__builtins__": {}}, {"token": token})
+
+    # -------------------------------------------------------------------------------------------- #
+    #                                           html 渲染逻辑                                       #
+    # -------------------------------------------------------------------------------------------- #
+
+    def _render_easy(self, token, rule_list):
+        """
+        简单渲染函数，用于处理那些不需要特殊处理的 token，只对 html_output 中的 §token['text']§ 进行替换操作
+        :param token : AST 中对应节点
+        :param rule_list : 匹配的规则列表
+        """
+        # 1. 遍历 rule_list 拿到找到 token 满足的 matching_rule
+        for rule in rule_list:
+            # 1.1 执行 matching_rule 并判断是否满足，如果满足则按照 html_output 进行解析
+            if self._save_eval_rule(rule['matching_rule'], token):
+                # 1.1.1 拿到 html_output 模板
+                html_output_template = rule['html_output']
+                # 1.1.2 从 html_output_template 中提取出所有被 § 包裹的内容
+                pattern = r'(§(.*?)§)'    # 非贪婪匹配 §...§ 之间的内容（最小匹配）
+                matches = re.findall(pattern, rule['html_output'])
+                # 1.1.3 替换 §...§ 为对应的值
+                for match in matches:
+                    # 如果 match 为 §token['tokens']§ 证明需要递归翻译
+                    if match[1] == "token['tokens']" :
+                        html_output_template = html_output_template.replace(match[0], self.translate(token['tokens']))
+                    else:
+                        html_output_template = html_output_template.replace(match[0], self._save_get_token(match[1], token))
+                # 1.1.4 返回渲染结果
+                return html_output_template 
+        # 2. 如果没有一条满足，返回默认渲染
+        return self._render_default(token)
 
     def _render_default(self, token):
         """
-        默认处理函数：如果找不到对应的渲染器，则尝试渲染子节点，否则直接返回 text 或 raw
+        默认渲染函数，当没有匹配的渲染函数时调用
+        :param token : AST 中对应节点
         """
-        if 'tokens' in token:
-            return self.translate(token['tokens'])
-        return html.escape(token.get('text', token.get('raw', '')))
+        # 直接将 token 转换为字符串并 HTML 转义
+        return html.escape(str(token))
 
-    # ----------------------------------------------------------------------- #
-    #                       块级元素渲染 (Block Elements)                       #
-    # ----------------------------------------------------------------------- #
-
-    def _render_heading(self, token):
-        """渲染标题: <h1~h6>...</h1~h6>"""
-        depth = token.get('depth', 1)
-        text_content = ""
-        if 'tokens' in token:
-            text_content = self.translate(token['tokens'])
-        else:
-            text_content = html.escape(token.get('text', ''))
-            
-        # 为标题添加 id，方便生成目录锚点（可选）
-        return f'<h{depth}>{text_content}</h{depth}>'
-
-    def _render_paragraph(self, token):
-        """渲染段落: <p>...</p>"""
-        content = self.translate(token.get('tokens', []))
-        # 如果段落为空，则不渲染，或者渲染一个 <br>
-        if not content:
-            return ""
-        return f'<p>{content}</p>'
-
-    def _render_br(self, token):
-        """渲染换行"""
-        return "<br>"
-
-    def _render_hr(self, token):
-        """渲染分割线"""
-        return "<hr>"
-
-    def _render_blockQuote(self, token):
-        """渲染引用块: <blockquote>...</blockquote>"""
-        content = self.translate(token.get('tokens', []))
-        return f'<blockquote>\n{content}\n</blockquote>'
-
-    def _render_codeBlock(self, token):
-        """渲染代码块: <pre><code class="...">...</code></pre>"""
-        lang = token.get('lang', '')
-        code = token.get('text', '')
-        # HTML 转义代码内容，防止 <script> 等被执行
-        escaped_code = html.escape(code)
-        
-        class_attr = f' class="language-{lang}"' if lang else ''
-        return f'<pre><code{class_attr}>{escaped_code}</code></pre>'
-
-    def _render_list(self, token):
+    # -------------------------------------------------------------------------------------------- #
+    #                                   块级元素渲染 (Block Elements)                                #
+    # -------------------------------------------------------------------------------------------- #
+    def _render_cardLink(self, token, rule_list):
         """
-        渲染列表容器 (AST Parser 有时将 list 作为容器，有时直接返回 list_items)
-        注意：根据你的 AST 结构，list 节点本身包含了 tokens (list_items)
+        渲染卡片链接
+        :param token : AST 中对应节点
+        :param rule_list : 匹配的规则列表
         """
-        # 你的 AST 解析器似乎将整个列表作为一个 type="list" 的节点
-        # 里面包含了 tokens (即 list_item 列表)
-        # 我们需要检查第一个 item 的 listType 来决定是 <ul> 还是 <ol>
-        # 但混合列表（有序+无序）在同一个 list 节点中比较少见，通常会被拆分
-        # 这里做一个简单的推断
-        
-        items_html = self.translate(token.get('tokens', []))
-        
-        # 简单的启发式判断：看第一个子项是否是有序的
-        is_ordered = False
-        if token.get('tokens') and len(token['tokens']) > 0:
-            if token['tokens'][0].get('listType') == 'ordered_list':
-                is_ordered = True
-                
-        tag = 'ol' if is_ordered else 'ul'
-        return f'<{tag}>\n{items_html}\n</{tag}>'
+        return self._render_easy(token, rule_list)
 
-    def _render_list_item(self, token):
-        """渲染列表项: <li>...</li>"""
-        content = ""
-        
-        # 处理任务列表 Checkbox
-        if token.get('listType') == 'task_list':
-            is_checked = token.get('taskFinish', False)
-            checked_str = 'checked' if is_checked else ''
-            # input 设为 disabled，仅作展示
-            content += f'<input type="checkbox" disabled {checked_str}> '
-
-        # 渲染列表项内容
-        # 注意：list_item 的 tokens 通常包含 paragraph，但也可能直接包含 text
-        # 如果直接包含 paragraph，paragraph 会带 <p> 标签，这在 li 中是合法的但有时会导致间距过大
-        # 视具体 CSS 需求而定，这里直接递归渲染
-        content += self.translate(token.get('tokens', []))
-        
-        return f'<li>{content}</li>'
-
-    def _render_table(self, token):
-        """渲染表格"""
-        # 1. Header
-        header_html = ""
-        if token.get('header'):
-            headers = []
-            aligns = token.get('align', [])
-            for idx, cell_tokens in enumerate(token['header']):
-                align_style = ""
-                if idx < len(aligns) and aligns[idx] != 'none':
-                    align_style = f' style="text-align: {aligns[idx]}"'
-                
-                cell_content = self.translate(cell_tokens)
-                headers.append(f'<th{align_style}>{cell_content}</th>')
-            header_html = f'<thead><tr>{"".join(headers)}</tr></thead>'
-
-        # 2. Body
-        body_html = ""
-        if token.get('rows'):
-            rows_html = []
-            aligns = token.get('align', [])
-            for row in token['rows']:
-                cells = []
-                for idx, cell_tokens in enumerate(row):
-                    align_style = ""
-                    if idx < len(aligns) and aligns[idx] != 'none':
-                        align_style = f' style="text-align: {aligns[idx]}"'
-                    
-                    cell_content = self.translate(cell_tokens)
-                    cells.append(f'<td{align_style}>{cell_content}</td>')
-                rows_html.append(f'<tr>{"".join(cells)}</tr>')
-            body_html = f'<tbody>\n{"".join(rows_html)}\n</tbody>'
-
-        return f'<table>\n{header_html}\n{body_html}\n</table>'
-
-    def _render_callout(self, token):
+    def _render_codeBlock(self, token, rule_list):
         """
-        渲染 Obsidian Callout
-        转换为带有特定 class 的 div
+        渲染代码块
+        :param token : AST 中对应节点
+        :param rule_list : 对应的规则（可能有很多条） [{}] 
         """
-        callout_type = token.get('calloutType', 'note').lower()
-        title_tokens = token.get('title', [])
-        content_tokens = token.get('tokens', []) # 注意：这里你的 AST 解析器似乎将内容放在 tokens 里，或者 text 里
-        
-        # 渲染标题
-        title_html = "Callout"
-        if title_tokens:
-             # title 是一个 AST 列表 (inline)
-             title_html = self.translate(title_tokens)
-        
-        # 渲染内容
-        # 如果 tokens 存在则优先使用 tokens（结构化内容），否则使用 text
-        content_html = ""
-        if content_tokens:
-             content_html = self.translate(content_tokens)
-        else:
-             # 如果内容只是纯文本
-             content_html = html.escape(token.get('text', ''))
+        return self._render_easy(token = token, rule_list = rule_list)
 
-        fold_class = ""
-        if token.get('fold') == 'collapse':
-            fold_class = " is-collapsed"
-        
-        # 构建 HTML 结构
-        # 这里使用常见的 Callout HTML 结构
-        return f'''
-<div class="callout callout-{callout_type}{fold_class}">
-    <div class="callout-title">
-        <div class="callout-icon"></div>
-        <div class="callout-title-inner">{title_html}</div>
-    </div>
-    <div class="callout-content">
-        {content_html}
-    </div>
-</div>
-'''
-
-    def _render_cardLink(self, token):
-        """渲染卡片链接"""
-        url = token.get('url', '#')
-        title = token.get('title', 'Link')
-        host = token.get('host', '')
-        
-        return f'''
-<div class="card-link">
-    <a href="{url}" target="_blank">
-        <div class="card-link-title">{title}</div>
-        <div class="card-link-host">{host}</div>
-    </a>
-</div>
-'''
-
-    def _render_comment(self, token):
-        """渲染注释: HTML 注释"""
-        text = token.get('text', '')
-        # 移除可能的 Obsidian 注释标记 %%
-        if text.startswith('%%'):
-            text = text[2:]
-        if text.endswith('%%'):
-            text = text[:-2]
-        return f'<!-- {html.escape(text.strip())} -->'
-
-    def _render_footNoteSign(self, token):
-        """渲染脚注引用: <sup><a href="#fn-1">[1]</a></sup>"""
-        order = token.get('order', '')
-        return f'<sup><a href="#fn-{order}" id="fnref-{order}">[{order}]</a></sup>'
-
-    def _render_footNoteContent(self, token):
-        """渲染脚注内容"""
-        order = token.get('order', '')
-        content = ""
-        # 脚注内容通常包含 text 或 token
-        if 'token' in token:
-            content = self.translate(token['token'])
-        else:
-            content = html.escape(token.get('text', ''))
-            
-        return f'<div class="footnote" id="fn-{order}"><sup>[{order}]</sup> {content} <a href="#fnref-{order}">↩</a></div>'
-
-    # -------------------------------------------------------------------------
-    # 行内元素渲染 (Inline Elements)
-    # -------------------------------------------------------------------------
-
-    def _render_text(self, token):
-        """渲染纯文本"""
-        return html.escape(token.get('text', ''))
-
-    def _render_strong(self, token):
-        """渲染粗体"""
-        content = self.translate(token.get('tokens', []))
-        return f'<strong>{content}</strong>'
-
-    def _render_italic(self, token):
-        """渲染斜体"""
-        content = self.translate(token.get('tokens', []))
-        return f'<em>{content}</em>'
-
-    def _render_del(self, token):
-        """渲染删除线"""
-        content = self.translate(token.get('tokens', []))
-        return f'<del>{content}</del>'
-
-    def _render_mark(self, token):
-        """渲染高亮"""
-        content = self.translate(token.get('tokens', []))
-        return f'<mark>{content}</mark>'
-
-    def _render_codeSpan(self, token):
-        """渲染行内代码"""
-        return f'<code>{html.escape(token.get("text", ""))}</code>'
-
-    def _render_link(self, token):
-        """渲染普通链接"""
-        href = token.get('src', '#')
-        text = token.get('text', '')
-        return f'<a href="{href}" target="_blank">{text}</a>'
-
-    def _render_image(self, token):
-        """渲染图片"""
-        src = token.get('src', '')
-        alt = token.get('alt', '')
-        width = token.get('width')
-        height = token.get('height')
-        
-        style = ""
-        if width:
-            style += f"width: {width}px;"
-        if height:
-            style += f"height: {height}px;"
-            
-        style_attr = f' style="{style}"' if style else ""
-        return f'<img src="{src}" alt="{alt}"{style_attr}>'
-
-    def _render_wikiLink(self, token):
+    def _render_callout(self, token, rule_list):
         """
-        渲染 Wiki 链接 [[Link]]
+        渲染标注块
+        :param token : AST 中对应节点
+        :param rule_list : 对应的规则（可能有很多条） [{}] 
         """
-        target = token.get('target', '')
-        display = token.get('display', target)
-        # 这里需要根据你的系统逻辑生成实际 URL
-        # 暂时生成一个占位链接
-        return f'<a href="/wiki/{target}" class="internal-link">{display}</a>'
+        return self._render_easy(token = token, rule_list = rule_list)
+
+    def _render_blockQuote(self, token, rule_list):
+        """
+        渲染引用块
+        :param token : AST 中对应节点
+        :param rule_list : 对应的规则（可能有很多条） [{}] 
+        """
+        return self._render_easy(token = token, rule_list = rule_list)
     
-    def _render_escape(self, token):
-        """渲染转义字符"""
-        return html.escape(token.get('text', ''))
+    def _render_list_item(self, token, rule_list):
+        """
+        渲染列表项
+        :param token : AST 中对应节点
+        :param rule_list : 对应的规则（可能有很多条） [{}] 
+        """
+        return self._render_easy(token = token, rule_list = rule_list)
+    
+    def _render_table(self, token, rule_list):
+        """
+        渲染表格
+        :param token : AST 中对应节点
+        :param rule_list : 对应的规则（可能有很多条） [{}] 
+        """
+        return self._render_easy(token = token, rule_list = rule_list)
+   
+    def _render_heading(self, token, rule_list):
+        """
+        渲染标题
+        :param token : AST 中对应节点
+        :param rule_list : 对应的规则（可能有很多条） [{}] 
+        """
+        return self._render_easy(token = token, rule_list = rule_list)
+    
+    def _render_hr(self, token, rule_list):
+        """
+        渲染水平分割线
+        :param token : AST 中对应节点
+        :param rule_list : 对应的规则（可能有很多条） [{}] 
+        """
+        return self._render_easy(token = token, rule_list = rule_list)
+
+    def _render_footNoteContent(self, token, rule_list):
+        """
+        渲染脚注内容
+        :param token : AST 中对应节点
+        :param rule_list : 对应的规则（可能有很多条） [{}] 
+        """
+        return self._render_easy(token = token, rule_list = rule_list)
+    
+    def _render_paragraph(self, token, rule_list):
+        """
+        渲染文本段落
+        :param token : AST 中对应节点
+        :param rule_list : 对应的规则（可能有很多条） [{}] 
+        """
+        return self._render_easy(token = token, rule_list = rule_list)
+    
+    def _render_br(self, token, rule_list):
+        """
+        渲染换行符
+        :param token : AST 中对应节点
+        :param rule_list : 对应的规则（可能有很多条） [{}] 
+        """
+        return self._render_easy(token = token, rule_list = rule_list)
+    # -------------------------------------------------------------------------------------------- #
+    #                                   行内元素渲染 (Inline Elements)                               #
+    # -------------------------------------------------------------------------------------------- #
+    def _render_escape(self, token, rule_list):
+        """
+        渲染转义字符
+        :param token : AST 中对应节点
+        :param rule_list : 对应的规则（可能有很多条） [{}] 
+        """
+        return self._render_easy(token = token, rule_list = rule_list)
+
+    def _render_codeSpan(self, token, rule_list):
+        """
+        渲染行内代码
+        :param token : AST 中对应节点
+        :param rule_list : 对应的规则（可能有很多条） [{}] 
+        """
+        return self._render_easy(token = token, rule_list = rule_list)
+
+    def _render_comment(self, token, rule_list):
+        """
+        渲染注释
+        :param token : AST 中对应节点
+        :param rule_list : 对应的规则（可能有很多条） [{}] 
+        """
+        return self._render_easy(token = token, rule_list = rule_list)
+    
+    def _render_footNoteSign(self, token, rule_list):
+        """
+        渲染脚注引用符号
+        :param token : AST 中对应节点
+        :param rule_list : 对应的规则（可能有很多条） [{}] 
+        """
+        return self._render_easy(token = token, rule_list = rule_list)
+    
+    def _render_embed(self, token, rule_list):
+        """
+        渲染嵌入内容
+        :param token : AST 中对应节点
+        :param rule_list : 对应的规则（可能有很多条） [{}] 
+        """
+        return self._render_easy(token = token, rule_list = rule_list)
+    
+    def _render_image(self, token, rule_list):
+        """
+        渲染外部图片引用
+        :param token : AST 中对应节点
+        :param rule_list : 对应的规则（可能有很多条） [{}] 
+        """
+        return self._render_easy(token = token, rule_list = rule_list)
+    
+    def _render_wikiLink(self, token, rule_list):
+        """
+        渲染内部链接（Wiki 风格）
+        :param token : AST 中对应节点
+        :param rule_list : 对应的规则（可能有很多条） [{}] 
+        """
+        return self._render_easy(token = token, rule_list = rule_list)
+    
+    def _render_link(self, token, rule_list):
+        """
+        渲染内部链接（Markdown 风格）
+        :param token : AST 中对应节点
+        :param rule_list : 对应的规则（可能有很多条） [{}] 
+        """
+        return self._render_easy(token = token, rule_list = rule_list)
+    
+    def _render_strong(self, token, rule_list):
+        """
+        渲染加粗文本
+        :param token : AST 中对应节点
+        :param rule_list : 对应的规则（可能有很多条） [{}] 
+        """
+        return self._render_easy(token = token, rule_list = rule_list)
+    
+    def _render_italic(self, token, rule_list):
+        """
+        渲染斜体文本
+        :param token : AST 中对应节点
+        :param rule_list : 对应的规则（可能有很多条） [{}] 
+        """
+        return self._render_easy(token = token, rule_list = rule_list)
+    
+    def _render_del(self, token, rule_list):
+        """
+        渲染删除线文本
+        :param token : AST 中对应节点
+        :param rule_list : 对应的规则（可能有很多条） [{}] 
+        """
+        return self._render_easy(token = token, rule_list = rule_list)
+    
+    def _render_mark(self, token, rule_list):
+        """
+        渲染高亮文本
+        :param token : AST 中对应节点
+        :param rule_list : 对应的规则（可能有很多条） [{}] 
+        """
+        return self._render_easy(token = token, rule_list = rule_list)
+    
+    def _render_text(self, token, rule_list):
+        """
+        渲染普通文本
+        :param token : AST 中对应节点
+        :param rule_list : 对应的规则（可能有很多条） [{}] 
+        """
+        return self._render_easy(token = token, rule_list = rule_list)
+
+if __name__ == "__main__":
+    translator = ASTHtmlTranslator(db_path = r'../../../res/database.db')
+    print(translator.mapping_rules)

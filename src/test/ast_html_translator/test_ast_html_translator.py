@@ -6,30 +6,43 @@ import json
 # Add src/main to sys.path to import modules
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_src_path = os.path.dirname(os.path.dirname(current_dir)) # src/test/.. -> src
-main_path = os.path.join(project_src_path, "main/ast_html_translator")
-if main_path not in sys.path:
-    sys.path.insert(0, main_path)
+markdown_ast_parser_path = os.path.join(project_src_path, "main/markdown_ast_parser")
+ast_html_translator_path = os.path.join(project_src_path, "main/ast_html_translator")
+if markdown_ast_parser_path not in sys.path:
+    sys.path.insert(0, markdown_ast_parser_path)
+if ast_html_translator_path not in sys.path:
+    sys.path.insert(0, ast_html_translator_path)
 
+from markdown_ast_parser import MarkdownASTParser
 from ast_html_translator import ASTHtmlTranslator
 
-def test_translate():
-    # 1. Load the test JSON AST
-    json_path = os.path.join(project_src_path, "test/markdown_ast_parser/test.json")
-    if not os.path.exists(json_path):
-        print(f"Error: JSON file not found at {json_path}")
-        return
-
-    with open(json_path, 'r', encoding='utf-8') as f:
-        ast_tokens = json.load(f)
-
-    # 2. Translate to HTML
-    translator = ASTHtmlTranslator()
-    html_output = translator.translate(ast_tokens)
-
-    # 3. Save output
-    output_path = os.path.join(current_dir, "test_output.html")
+class ASTHtmlTranslatorTest(ASTHtmlTranslator):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
     
-    # Add a simple HTML wrapper for viewing in browser
+
+
+if __name__ == "__main__":
+    db_path = r'../../../res/database.db'
+    parser = MarkdownASTParser(db_path = db_path)
+    translator = ASTHtmlTranslatorTest(db_path = db_path)
+
+    # 1. 读取 test.md 中的内容
+    content = ""
+    with open("test.md", 'r', encoding='utf-8') as f:
+         content = f.read()
+    print("================= Markdown Content =================\n")
+    print(content)
+    # 2. 解析 Markdown 内容为 AST
+    ast_tokens = parser.parse(content)
+    print("\n==================== AST Tokens ===================\n")
+    print(ast_tokens)
+    # 3. 将 AST 转换为 HTML
+    print("\n==================== HTML Output ===================\n")
+    html_output = translator.translate(ast_tokens)
+    print(html_output)
+    
+    # 4. 将生成的完整 HTML 代码输出到一个文件中
     full_html = f"""
 <!DOCTYPE html>
 <html lang="en">
@@ -65,16 +78,6 @@ def test_translate():
 </body>
 </html>
     """
-    
-    with open(output_path, 'w', encoding='utf-8') as f:
-        f.write(full_html)
-        
-    print(f"HTML output saved to: {output_path}")
-    
-    # Print a snippet to console
-    print("\n--- HTML Snippet (First 500 chars) ---")
-    print(html_output[:500])
-    print("...")
 
-if __name__ == "__main__":
-    test_translate()
+    with open("test.html", "w", encoding="utf-8") as f:
+        f.write(full_html)
