@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>风格管理 - MarkTrans</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <header class="top-nav">
+        <div class="brand">MarkTrans</div>
+        <nav class="nav-links">
+            <a class="nav-link" href="/">转换工作台</a>
+            <a class="nav-link active" href="/styles">风格管理</a>
+            <a class="nav-link" href="/admin">规则与数据管理</a>
+            <a class="nav-link" href="/docs">系统说明</a>
+        </nav>
+        <div class="pill">样式系统</div>
+    </header>
+
+    <main class="page">
+        <section class="card">
+            <h2>新增风格</h2>
+            <div class="style-create-grid">
+                <div class="field">
+                    <label>
+                        基于的选中风格
+                        <span class="hint-tooltip-wrap">
+                            <span class="hint-badge">?</span>
+                            <span class="hint-tooltip">用户在创建自定义风格时，需先选定一款风格模板作为修改基础，以此保证后续 Markdown 转 HTML 过程中，每条语法元素均有对应的映射规则可循。</span>
+                        </span>
+                    </label>
+                    <select id="baseStyleSelect"></select>
+                </div>
+                <div class="field">
+                    <label>新风格名称</label>
+                    <input id="newStyleName" type="text" placeholder="输入新风格名称">
+                </div>
+                <div class="field style-create-action">
+                    <label>&nbsp;</label>
+                    <button class="btn btn-success btn-nowrap" id="cloneStyleBtn">基于选中风格创建新的风格</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>风格列表</h2>
+            <div id="stylesTableWrap" class="table-wrap"></div>
+        </section>
+    </main>
+
+    <div id="styleEditModal" class="modal">
+        <div class="modal-content style-edit-modal-content">
+            <div class="modal-header">
+                <strong id="styleModalTitle">编辑风格</strong>
+                <button class="btn btn-danger" id="closeStyleModalBtn">关闭</button>
+            </div>
+            <div class="modal-body">
+                <div class="card" style="margin-bottom:10px;">
+                    <h2 style="font-size:16px;">风格信息</h2>
+                    <div class="style-edit-grid">
+                        <div class="field">
+                            <label>style_name</label>
+                            <input id="styleModalName" type="text">
+                        </div>
+                        <div class="field">
+                            <label>remark</label>
+                            <input id="styleModalRemark" type="text">
+                        </div>
+                        <div class="field style-create-action">
+                            <label>&nbsp;</label>
+                            <button class="btn btn-primary" id="saveStyleMetaBtn">保存风格信息</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h2 style="font-size:16px; margin:0;">映射规则（mapping_rule）</h2>
+                        <button class="btn btn-success" id="addRuleBtn">新增规则</button>
+                    </div>
+                    <div id="styleRulesWrap" class="table-wrap rule-list-wrap" style="margin-top:10px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="ruleEditModal" class="modal">
+        <div class="modal-content style-rule-modal-content">
+            <div class="modal-header">
+                <strong id="ruleModalTitle">编辑规则</strong>
+                <button class="btn btn-danger" id="closeRuleModalBtn">关闭</button>
+            </div>
+            <div class="modal-body">
+                <div id="ruleEditorWrap" class="rule-editor-wrap"></div>
+                <div class="rule-modal-actions">
+                    <button class="btn btn-primary" id="saveRuleBtn">保存规则</button>
+                    <button class="btn btn-danger" id="cancelRuleBtn">取消编辑</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/styles.js"></script>
+</body>
+</html>

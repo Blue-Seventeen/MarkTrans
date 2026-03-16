@@ -3,381 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>数据库管理 - Obsidian to WeChat</title>
+    <title>规则与数据管理 - MarkTrans</title>
     <link rel="stylesheet" href="/style.css">
-    <style>
-        .admin-container {
-            display: flex;
-            flex-direction: column;
-            padding: 20px;
-            width: 100%;
-            height: 100vh;
-            box-sizing: border-box;
-            margin: 0;
-        }
-        
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        
-        .table-selector {
-            margin-bottom: 20px;
-        }
-        
-        select {
-            padding: 8px;
-            font-size: 16px;
-        }
-        
-        #tableContainer {
-            flex-grow: 1;
-            overflow-y: auto;
-            overflow-x: auto; /* Enable horizontal scroll */
-            border: 1px solid #ddd;
-        }
-
-        .data-table {
-            width: 100%;
-            border-collapse: collapse;
-            table-layout: auto; /* Auto column width */
-            background: white;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-        
-        .data-table th, .data-table td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #eee;
-            white-space: pre-wrap; /* Allow wrapping and newlines */
-            max-width: 300px; /* Prevent extremely wide columns */
-            word-break: break-word;
-        }
-        
-        .data-table th {
-            position: sticky;
-            top: 0;
-            background-color: #f8f9fa;
-            font-weight: 600;
-            z-index: 10;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-        }
-        
-        .data-table tr:hover {
-            background-color: #f5f5f5;
-        }
-        
-        .actions {
-            display: flex;
-            gap: 10px;
-        }
-        
-        .btn-sm {
-            padding: 4px 8px;
-            font-size: 12px;
-            cursor: pointer;
-        }
-        
-        .btn-edit { background-color: #007bff; color: white; border: none; border-radius: 3px; }
-        .btn-delete { background-color: #dc3545; color: white; border: none; border-radius: 3px; }
-        .btn-add { background-color: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; }
-        
-        /* Modal */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.5);
-        }
-        
-        .modal-content {
-            background-color: white;
-            margin: 5% auto;
-            padding: 0;
-            width: 60%;
-            border-radius: 5px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-            max-height: 90vh;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 20px;
-            border-bottom: 1px solid #eee;
-            background-color: #fff;
-            border-radius: 5px 5px 0 0;
-        }
-
-        #modalForm {
-            padding: 20px;
-            overflow-y: auto;
-            flex: 1;
-        }
-        
-        .close {
-            cursor: pointer;
-            font-size: 24px;
-        }
-        
-        .form-row {
-            margin-bottom: 15px;
-        }
-        
-        .form-row label {
-            display: block;
-            margin-bottom: 5px;
-        }
-        
-        .form-row input, .form-row textarea {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        
-        .btn-save {
-            background-color: #07c160;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            width: 100%;
-        }
-    </style>
 </head>
 <body>
-    <div class="admin-container">
-        <div class="header">
-            <h1>数据库管理</h1>
-            <a href="/" class="btn-primary" style="text-decoration: none;">返回转换器</a>
-        </div>
-        
-        <div class="table-selector">
-            <label>选择数据表：</label>
-            <select id="tableSelect">
-                <option value="mapping_base">Mapping Base (基础元素)</option>
-                <option value="mapping_style">Mapping Style (风格)</option>
-                <option value="mapping_rule">Mapping Rule (规则)</option>
-            </select>
-            <button class="btn-add" onclick="openAddModal()">添加新记录</button>
-        </div>
-        
-        <div id="tableContainer">
-            <!-- Data table will be rendered here -->
-        </div>
-    </div>
+    <header class="top-nav">
+        <div class="brand">MarkTrans</div>
+        <nav class="nav-links">
+            <a class="nav-link" href="/">转换工作台</a>
+            <a class="nav-link" href="/styles">风格管理</a>
+            <a class="nav-link active" href="/admin">规则与数据管理</a>
+            <a class="nav-link" href="/docs">系统说明</a>
+        </nav>
+        <div class="pill">数据库管理</div>
+    </header>
 
-    <!-- Edit/Add Modal -->
+    <main class="page">
+        <section class="card">
+            <h2>数据库可视化管理</h2>
+            <p class="toolbar-caption">工具栏用于切换数据表、选择展示列，并可直接执行只读 SQLite 查询。</p>
+            <div class="table-tools admin-tools">
+                <div class="field">
+                    <label>选择数据表</label>
+                    <select id="tableSelect">
+                        <option value="mapping_base">mapping_base</option>
+                        <option value="mapping_style">mapping_style</option>
+                        <option value="mapping_rule">mapping_rule</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>选择展示列（勾选即生效）</label>
+                    <div id="columnChecklist" class="column-checklist"></div>
+                </div>
+                <div class="field sql-field">
+                    <label>执行 SQLite（仅 SELECT）</label>
+                    <input id="sqlInput" type="text" placeholder="例如：SELECT id, style_name FROM mapping_style ORDER BY id DESC">
+                </div>
+                <div class="field">
+                    <label>&nbsp;</label>
+                    <button class="btn btn-ghost" id="runSqlBtn">执行 SQL</button>
+                </div>
+                <div class="field">
+                    <label>&nbsp;</label>
+                    <button class="btn btn-success" id="addBtn">新增记录</button>
+                </div>
+            </div>
+            <div id="tableContainer" class="table-wrap admin-table-wrap"></div>
+        </section>
+    </main>
+
     <div id="editModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 id="modalTitle">编辑记录</h2>
-                <span class="close" onclick="closeModal()">&times;</span>
+                <strong id="modalTitle">编辑记录</strong>
+                <button class="btn btn-danger" id="closeModalBtn">关闭</button>
             </div>
-            <div id="modalForm">
-                <!-- Form fields injected here -->
-            </div>
+            <div class="modal-body" id="modalForm"></div>
         </div>
     </div>
 
-    <script>
-        let currentTable = 'mapping_base';
-        let currentData = [];
-        let tableSchema = {
-            'mapping_base': ['id', 'element_name', 'element_name_en', 'element_description', 'element_category', 'weight', 'ast_example_input', 'ast_example_output', 'element_regex_rule', 'element_handler_name'],
-            'mapping_style': ['id', 'style_name', 'is_active', 'is_deletable', 'remark'],
-            'mapping_rule': ['id', 'style_id', 'style_rule_name', 'ast_input', 'matching_rule', 'html_output', 'render_name', 'weight']
-        };
-
-        const tableSelect = document.getElementById('tableSelect');
-        tableSelect.addEventListener('change', (e) => {
-            currentTable = e.target.value;
-            loadTableData();
-        });
-
-        async function loadTableData() {
-            const response = await fetch(`/api/db/${currentTable}`);
-            const data = await response.json();
-            currentData = data;
-            renderTable(data);
-        }
-
-        function renderTable(data) {
-            const container = document.getElementById('tableContainer');
-            if (data.length === 0) {
-                container.innerHTML = '<p>暂无数据</p>';
-                return;
-            }
-
-            // Define columns order strictly based on schema
-            const columns = tableSchema[currentTable];
-            
-            let html = '<table class="data-table"><thead><tr>';
-            
-            // Headers
-            columns.forEach(col => {
-                html += `<th>${col}</th>`;
-            });
-            html += '<th>操作</th></tr></thead><tbody>';
-            
-            // Rows
-            data.forEach((row, index) => {
-                html += '<tr>';
-                columns.forEach(col => {
-                    let val = row[col];
-                    if (val && val.length > 50) val = val.substring(0, 50) + '...';
-                    html += `<td>${val === null ? '' : escapeHtml(String(val))}</td>`;
-                });
-                
-                // Keys for delete/edit
-                let keyAttr = `data-id="${row.id}"`;
-                
-                html += `
-                    <td class="actions">
-                        <button class="btn-sm btn-edit" onclick="openEditModal(${index})">编辑</button>
-                        <button class="btn-sm btn-delete" onclick='deleteRow(${index})'>删除</button>
-                    </td>
-                </tr>`;
-            });
-            
-            html += '</tbody></table>';
-            container.innerHTML = html;
-        }
-
-        function escapeHtml(text) {
-            return text
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#039;");
-        }
-
-        // --- Modal & Form Handling ---
-        
-        let isEditing = false;
-        let editIndex = -1;
-
-        window.openAddModal = function() {
-            isEditing = false;
-            document.getElementById('modalTitle').innerText = '添加新记录';
-            renderForm();
-            document.getElementById('editModal').style.display = 'block';
-        }
-
-        window.openEditModal = function(index) {
-            isEditing = true;
-            editIndex = index;
-            document.getElementById('modalTitle').innerText = '编辑记录';
-            renderForm(currentData[index]);
-            document.getElementById('editModal').style.display = 'block';
-        }
-
-        window.closeModal = function() {
-            document.getElementById('editModal').style.display = 'none';
-        }
-
-        function renderForm(rowData = null) {
-            const formContainer = document.getElementById('modalForm');
-            const fields = tableSchema[currentTable];
-            let html = '<form id="dataForm">';
-            
-            fields.forEach(field => {
-                let value = rowData ? rowData[field] : '';
-                let readOnly = '';
-                
-                // If editing, ID should be read-only
-                if (isEditing && field === 'id') {
-                    readOnly = 'readonly style="background-color: #eee"';
-                }
-                
-                let inputHtml = '';
-                // Updated list of fields that should be TextAreas
-                const textAreaFields = ['element_description', 'html_output', 'remark', 'matching_rule', 'ast_input', 'ast_example_input', 'ast_example_output', 'element_regex_rule'];
-                if (textAreaFields.includes(field)) {
-                    inputHtml = `<textarea name="${field}" rows="3" ${readOnly}>${value === null ? '' : escapeHtml(String(value))}</textarea>`;
-                } else {
-                    inputHtml = `<input type="text" name="${field}" value="${value === null ? '' : escapeHtml(String(value))}" ${readOnly}>`;
-                }
-
-                html += `
-                    <div class="form-row">
-                        <label>${field}</label>
-                        ${inputHtml}
-                    </div>
-                `;
-            });
-            
-            html += '<button type="button" class="btn-save" onclick="saveData()">保存</button>';
-            html += '</form>';
-            formContainer.innerHTML = html;
-        }
-
-        window.saveData = async function() {
-            const form = document.getElementById('dataForm');
-            const formData = new FormData(form);
-            const data = {};
-            formData.forEach((value, key) => data[key] = value);
-            
-            let url = `/api/db/${currentTable}`;
-            let payload = data;
-            
-            if (isEditing) {
-                url += '/update';
-                payload = {
-                    id: data.id,
-                    updates: data
-                };
-            }
-            
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(payload)
-            });
-            
-            const result = await response.json();
-            if (result.error) {
-                alert('Error: ' + result.error);
-            } else {
-                closeModal();
-                loadTableData();
-            }
-        }
-
-        window.deleteRow = async function(index) {
-            if (!confirm('确定要删除这条记录吗？')) return;
-            
-            const row = currentData[index];
-            let payload = { id: row.id };
-            
-            const response = await fetch(`/api/db/${currentTable}/delete`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(payload)
-            });
-            
-            const result = await response.json();
-            if (result.error) {
-                alert('Error: ' + result.error);
-            } else {
-                loadTableData();
-            }
-        }
-
-        // Initial load
-        loadTableData();
-    </script>
+    <script src="/admin.js"></script>
 </body>
 </html>
