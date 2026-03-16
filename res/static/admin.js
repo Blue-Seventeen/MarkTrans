@@ -8,14 +8,17 @@ let currentTable = 'mapping_base';
 let currentData = [];
 let isEditing = false;
 let editIndex = -1;
+let visibleColumns = [...tableSchema.mapping_base];
+let currentSort = { column: null, order: null };
+let isSqlMode = false;
 
 const tableSelect = document.getElementById('tableSelect');
-const sortColumnSelect = document.getElementById('sortColumnSelect');
-const sortOrderSelect = document.getElementById('sortOrderSelect');
+const columnChecklist = document.getElementById('columnChecklist');
 const tableContainer = document.getElementById('tableContainer');
 const editModal = document.getElementById('editModal');
 const modalTitle = document.getElementById('modalTitle');
 const modalForm = document.getElementById('modalForm');
+const sqlInput = document.getElementById('sqlInput');
 
 function escapeHtml(text) {
     return String(text)
@@ -26,31 +29,44 @@ function escapeHtml(text) {
         .replace(/'/g, '&#039;');
 }
 
-function refreshSortColumns() {
-    const columns = tableSchema[currentTable];
-    sortColumnSelect.innerHTML = columns.map(col => `<option value="${col}">${col}</option>`).join('');
-}
-
 async function loadTableData() {
-    const sortBy = sortColumnSelect.value || tableSchema[currentTable][0];
-    const order = sortOrderSelect.value || 'asc';
-    const response = await fetch(`/api/db/${currentTable}?sort_by=${encodeURIComponent(sortBy)}&order=${encodeURIComponent(order)}`);
+    isSqlMode = false;
+    const sortBy = currentSort.column;
+    const order = currentSort.order;
+    const query = sortBy && order
+        ? `?sort_by=${encodeURIComponent(sortBy)}&order=${encodeURIComponent(order)}`
+        : '';
+    const response = await fetch(`/api/db/${currentTable}${query}`);
     const data = await response.json();
     if (data.error) {
         alert(data.error);
         return;
     }
     currentData = data;
+    if (!visibleColumns.length) {
+        visibleColumns = [...tableSchema[currentTable]];
+    }
     renderTable();
 }
 
 function renderTable() {
-    const columns = tableSchema[currentTable];
+    const columns = isSqlMode
+        ? visibleColumns
+        : visibleColumns.filter(col => tableSchema[currentTable].includes(col));
+    if (!columns.length) {
+        tableContainer.innerHTML = '<div style="padding:12px;">请先选择至少一列用于展示</div>';
+        return;
+    }
     if (!currentData.length) {
         tableContainer.innerHTML = '<div style="padding:12px;">暂无数据</div>';
         return;
     }
-    const header = columns.map(col => `<th>${col}</th>`).join('');
+    const header = columns.map(col => {
+        let icon = '↕';
+        if (currentSort.column === col && currentSort.order === 'desc') icon = '▼';
+        if (currentSort.column === col && currentSort.order === 'asc') icon = '▲';
+        return `<th class="sortable-th" data-sort-col="${col}">${col} <span class="sort-icon">${icon}</span></th>`;
+    }).join('');
     const rows = currentData.map((row, index) => {
         const tds = columns.map(col => {
             let value = row[col];
@@ -59,9 +75,9 @@ function renderTable() {
             if (value.length > 140) value = `${value.slice(0, 140)}...`;
             return `<td>${escapeHtml(value)}</td>`;
         }).join('');
-        return `<tr>${tds}<td><button class="btn btn-primary" data-edit="${index}">编辑</button> <button class="btn btn-danger" data-del="${index}">删除</button></td></tr>`;
+        return `<tr>${tds}<td class="operation-col"><div class="action-row"><button class="btn btn-primary" data-edit="${index}">编辑</button><button class="btn btn-danger" data-del="${index}">删除</button></div></td></tr>`;
     }).join('');
-    tableContainer.innerHTML = `<table class="data-table"><thead><tr>${header}<th>操作</th></tr></thead><tbody>${rows}</tbody></table>`;
+    tableContainer.innerHTML = `<table class="data-table styles-table admin-scroll-table"><thead><tr>${header}<th class="operation-col">操作</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 function nextId() {
@@ -81,7 +97,7 @@ function openModal(rowData = null) {
             : `<input type="text" name="${field}" value="${escapeHtml(value)}" ${readonly}>`;
         html += `<div class="field"><label>${field}</label>${input}</div>`;
     });
-    html += '</div><div style="margin-top:10px;"><button class="btn btn-success" id="saveBtn">保存</button></div>';
+    html += '</div><div class="rule-modal-actions"><button class="btn btn-success" id="saveBtn">保存</button><button class="btn btn-danger" id="cancelEditBtn">取消编辑</button></div>';
     modalForm.innerHTML = html;
     editModal.style.display = 'block';
 }
@@ -89,6 +105,56 @@ function openModal(rowData = null) {
 function closeModal() {
     editModal.style.display = 'none';
     modalForm.innerHTML = '';
+}
+
+function refreshColumnOptions() {
+    const columns = tableSchema[currentTable];
+    columnChecklist.innerHTML = columns.map(col => {
+        const checked = visibleColumns.includes(col) ? 'checked' : '';
+        return `<label class="check-item"><input type="checkbox" value="${col}" ${checked}> ${col}</label>`;
+    }).join('');
+}
+
+function applySelectedColumns() {
+    const selected = Array.from(columnChecklist.querySelectorAll('input[type="checkbox"]:checked')).map(x => x.value);
+    visibleColumns = selected;
+    renderTable();
+}
+
+function cycleSort(col) {
+    if (currentSort.column !== col) {
+        currentSort = { column: col, order: 'desc' };
+        return;
+    }
+    if (currentSort.order === 'desc') {
+        currentSort = { column: col, order: 'asc' };
+        return;
+    }
+    if (currentSort.order === 'asc') {
+        currentSort = { column: null, order: null };
+        return;
+    }
+    currentSort = { column: col, order: 'desc' };
+}
+
+function applySqlSort() {
+    if (!currentSort.column || !currentSort.order) return;
+    const col = currentSort.column;
+    const order = currentSort.order;
+    currentData = [...currentData].sort((a, b) => {
+        const va = a?.[col];
+        const vb = b?.[col];
+        const na = Number(va);
+        const nb = Number(vb);
+        const bothNumber = !Number.isNaN(na) && !Number.isNaN(nb);
+        if (bothNumber) {
+            return order === 'desc' ? nb - na : na - nb;
+        }
+        const sa = String(va ?? '');
+        const sb = String(vb ?? '');
+        if (order === 'desc') return sb.localeCompare(sa, 'zh-Hans-CN');
+        return sa.localeCompare(sb, 'zh-Hans-CN');
+    });
 }
 
 async function saveData() {
@@ -116,8 +182,12 @@ async function saveData() {
 }
 
 async function deleteRow(index) {
-    if (!confirm('确定要删除这条记录吗？')) return;
     const row = currentData[index];
+    if (currentTable === 'mapping_style') {
+        if (!confirm('删除风格时，对应的所有映射规则也会被同时删除。是否确认继续？')) return;
+    } else {
+        if (!confirm('确定要删除这条记录吗？')) return;
+    }
     const resp = await fetch(`/api/db/${currentTable}/delete`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -131,15 +201,52 @@ async function deleteRow(index) {
     await loadTableData();
 }
 
+async function runSqlQuery() {
+    const sql = sqlInput.value.trim();
+    if (!sql) {
+        alert('请先输入 SQL 语句');
+        return;
+    }
+    const resp = await fetch('/api/db/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sql })
+    });
+    const result = await resp.json();
+    if (result.error) {
+        alert(result.error);
+        return;
+    }
+    const rows = result.rows || [];
+    currentData = rows;
+    const cols = result.columns || [];
+    visibleColumns = cols;
+    currentSort = { column: null, order: null };
+    isSqlMode = true;
+    columnChecklist.innerHTML = cols.map(col => `<label class="check-item"><input type="checkbox" value="${col}" checked> ${col}</label>`).join('');
+    if (!rows.length) {
+        tableContainer.innerHTML = '<div style="padding:12px;">查询执行成功，返回 0 条记录</div>';
+        return;
+    }
+    renderTable();
+}
+
 tableSelect.addEventListener('change', async (e) => {
     currentTable = e.target.value;
-    refreshSortColumns();
+    visibleColumns = [...tableSchema[currentTable]];
+    currentSort = { column: null, order: null };
+    refreshColumnOptions();
     await loadTableData();
 });
 
-document.getElementById('sortBtn').addEventListener('click', loadTableData);
+document.getElementById('runSqlBtn').addEventListener('click', runSqlQuery);
+columnChecklist.addEventListener('change', applySelectedColumns);
 
 document.getElementById('addBtn').addEventListener('click', () => {
+    if (isSqlMode) {
+        alert('SQL 查询模式下不支持新增，请先切回数据表视图');
+        return;
+    }
     isEditing = false;
     editIndex = -1;
     modalTitle.textContent = '新增记录';
@@ -149,9 +256,24 @@ document.getElementById('addBtn').addEventListener('click', () => {
 document.getElementById('closeModalBtn').addEventListener('click', closeModal);
 
 tableContainer.addEventListener('click', async (e) => {
+    const sortCol = e.target.closest('[data-sort-col]')?.getAttribute('data-sort-col');
+    if (sortCol) {
+        cycleSort(sortCol);
+        if (isSqlMode) {
+            applySqlSort();
+            renderTable();
+        } else {
+            await loadTableData();
+        }
+        return;
+    }
     const editIndexValue = e.target.getAttribute('data-edit');
     const delIndexValue = e.target.getAttribute('data-del');
     if (editIndexValue !== null) {
+        if (isSqlMode) {
+            alert('SQL 查询模式下不支持编辑，请先切回数据表视图');
+            return;
+        }
         isEditing = true;
         editIndex = Number(editIndexValue);
         modalTitle.textContent = '编辑记录';
@@ -159,6 +281,10 @@ tableContainer.addEventListener('click', async (e) => {
         return;
     }
     if (delIndexValue !== null) {
+        if (isSqlMode) {
+            alert('SQL 查询模式下不支持删除，请先切回数据表视图');
+            return;
+        }
         await deleteRow(Number(delIndexValue));
     }
 });
@@ -166,8 +292,12 @@ tableContainer.addEventListener('click', async (e) => {
 modalForm.addEventListener('click', async (e) => {
     if (e.target.id === 'saveBtn') {
         await saveData();
+        return;
+    }
+    if (e.target.id === 'cancelEditBtn') {
+        closeModal();
     }
 });
 
-refreshSortColumns();
+refreshColumnOptions();
 loadTableData();

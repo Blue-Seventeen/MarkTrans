@@ -2,3 +2,6 @@
 __pycache__/
 **/__pycache__/
 *.py[cod]
+
+# Vercel 本地部署缓存（自动生成，无需提交）
+.vercel/

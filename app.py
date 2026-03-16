@@ -131,6 +131,31 @@ def get_tables():
     return jsonify(['mapping_base', 'mapping_style', 'mapping_rule'])
 
 
+@app.route('/api/db/query', methods=['POST'])
+def run_db_query():
+    data = request.json or {}
+    sql = (data.get('sql') or '').strip()
+    if not sql:
+        return jsonify({'error': 'SQL is required'}), 400
+    sql_lower = sql.lower().strip().rstrip(';')
+    if not (sql_lower.startswith('select ') or sql_lower.startswith('pragma ')):
+        return jsonify({'error': '仅允许执行 SELECT 或 PRAGMA 查询'}), 400
+    if ';' in sql_lower:
+        return jsonify({'error': '仅允许单条查询语句'}), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(sql)
+        rows = [dict(row) for row in cursor.fetchall()]
+        columns = [col[0] for col in (cursor.description or [])]
+    except Exception as e:
+        conn.close()
+        return jsonify({'error': str(e)}), 400
+    conn.close()
+    return jsonify({'columns': columns, 'rows': rows})
+
+
 @app.route('/api/db/<table_name>', methods=['GET'])
 def get_table_data(table_name):
     if table_name not in ['mapping_base', 'mapping_style', 'mapping_rule']:
@@ -200,6 +225,25 @@ def delete_table_row(table_name):
                 style_id = data.get('style_id')
                 style_rule_name = data.get('style_rule_name')
                 cursor.execute(f"DELETE FROM {table_name} WHERE style_id=? AND style_rule_name=?", (style_id, style_rule_name))
+        elif table_name == 'mapping_style':
+            id_val = data.get('id')
+            if id_val is None:
+                conn.close()
+                return jsonify({'error': 'Style id required'}), 400
+            if int(id_val) == 1:
+                conn.close()
+                return jsonify({'error': '系统默认风格不可删除'}), 400
+            cursor.execute("SELECT id, is_active FROM mapping_style WHERE id = ? LIMIT 1", (id_val,))
+            style_row = cursor.fetchone()
+            if style_row is None:
+                conn.close()
+                return jsonify({'error': 'Record not found'}), 404
+            was_active = int(style_row["is_active"] or 0) == 1
+            cursor.execute("DELETE FROM mapping_rule WHERE style_id = ?", (id_val,))
+            cursor.execute("DELETE FROM mapping_style WHERE id = ?", (id_val,))
+            if was_active:
+                cursor.execute("UPDATE mapping_style SET is_active = 0")
+                cursor.execute("UPDATE mapping_style SET is_active = 1 WHERE id = 1")
         else:
             id_val = data.get('id')
             cursor.execute(f"DELETE FROM {table_name} WHERE id=?", (id_val,))

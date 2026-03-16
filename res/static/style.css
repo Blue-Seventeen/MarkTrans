@@ -65,7 +65,7 @@ a {
 
 .toolbar {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr auto auto auto;
+    grid-template-columns: 1fr 1fr 1fr auto auto;
     gap: 10px;
 }
 
@@ -111,9 +111,23 @@ textarea {
     color: #ffffff;
 }
 
+#parseBtn,
+#convertBtn {
+    height: 36px;
+    padding-top: 0;
+    padding-bottom: 0;
+    align-self: end;
+}
+
 .btn-danger {
     background: #dc2626;
     color: #ffffff;
+}
+
+.btn-disabled {
+    background: #94a3b8;
+    color: #f8fafc;
+    cursor: not-allowed;
 }
 
 .btn-ghost {
@@ -317,4 +331,239 @@ textarea {
     border-radius: 8px;
     padding: 8px 10px;
     font-size: 13px;
+}
+
+.style-create-grid {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr auto;
+    gap: 10px;
+    align-items: end;
+}
+
+.style-create-action {
+    min-width: 230px;
+}
+
+.btn-nowrap {
+    white-space: nowrap;
+}
+
+.hint-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 999px;
+    margin-left: 6px;
+    font-size: 11px;
+    background: #e0f2fe;
+    color: #0369a1;
+    border: 1px solid #7dd3fc;
+    cursor: help;
+}
+
+.hint-tooltip-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.hint-tooltip {
+    position: absolute;
+    left: 22px;
+    top: -8px;
+    width: 340px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid #bfdbfe;
+    background: #eff6ff;
+    color: #1e3a8a;
+    font-size: 12px;
+    line-height: 1.5;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.15);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-4px);
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    z-index: 20;
+}
+
+.hint-tooltip-wrap:hover .hint-tooltip {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.action-row {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: nowrap;
+}
+
+.styles-table th,
+.styles-table td {
+    text-align: center;
+    vertical-align: middle;
+    padding: 8px 10px;
+    line-height: 1.25;
+}
+
+.style-edit-modal-content {
+    width: min(1200px, 94vw);
+}
+
+.style-edit-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 10px;
+    align-items: end;
+}
+
+.rule-editor-wrap {
+    border: 1px solid #dbeafe;
+    border-radius: 10px;
+    background: #f8fbff;
+    padding: 10px;
+}
+
+.style-rule-modal-content {
+    width: min(1000px, 92vw);
+}
+
+.rule-modal-actions {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.admin-table-wrap {
+    overflow: auto;
+    max-height: 560px;
+    position: relative;
+}
+
+.admin-scroll-table {
+    width: max-content;
+    min-width: 100%;
+    table-layout: auto;
+}
+
+.admin-scroll-table th {
+    white-space: nowrap;
+}
+
+.admin-scroll-table .operation-col {
+    position: sticky;
+    right: 0;
+    min-width: 170px;
+    background: #ffffff;
+    z-index: 6;
+    border-left: 1px solid #e2e8f0;
+    box-shadow: -8px 0 10px -10px rgba(15, 23, 42, 0.55);
+}
+
+.admin-scroll-table thead .operation-col {
+    background: #f8fafc;
+    z-index: 12;
+}
+
+.toolbar-caption {
+    margin: 0 0 8px;
+    color: #475569;
+    font-size: 13px;
+}
+
+.sortable-th {
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.sortable-th:hover {
+    background: #eaf2ff;
+}
+
+.sort-icon {
+    display: inline-block;
+    min-width: 16px;
+    color: #64748b;
+    font-size: 12px;
+}
+
+.admin-tools {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    flex-wrap: nowrap;
+    width: 100%;
+}
+
+.admin-tools .field {
+    min-width: 150px;
+}
+
+.column-checklist {
+    width: 360px;
+    height: 38px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 5px 8px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px 8px;
+    align-content: start;
+}
+
+.check-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #334155;
+    line-height: 1.5;
+    padding: 1px 0;
+    white-space: nowrap;
+}
+
+.sql-field {
+    flex: 1;
+    min-width: 440px;
+}
+
+.sql-field input {
+    width: 100%;
+}
+
+.rule-list-wrap {
+    overflow: hidden;
+}
+
+.rules-scroll-table {
+    width: 100%;
+    table-layout: fixed;
+}
+
+.rules-scroll-table thead,
+.rules-scroll-table tbody {
+    display: block;
+}
+
+.rules-scroll-table thead tr,
+.rules-scroll-table tbody tr {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+}
+
+.rules-scroll-table tbody {
+    max-height: 320px;
+    overflow-y: auto;
+    overflow-x: hidden;
 }

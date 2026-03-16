@@ -21,21 +21,34 @@
     <main class="page">
         <section class="card">
             <h2>数据库可视化管理</h2>
-            <div class="table-tools">
-                <select id="tableSelect">
-                    <option value="mapping_base">mapping_base</option>
-                    <option value="mapping_style">mapping_style</option>
-                    <option value="mapping_rule">mapping_rule</option>
-                </select>
-                <select id="sortColumnSelect"></select>
-                <select id="sortOrderSelect">
-                    <option value="asc">升序</option>
-                    <option value="desc">降序</option>
-                </select>
-                <button class="btn btn-primary" id="sortBtn">应用排序</button>
-                <button class="btn btn-success" id="addBtn">新增记录</button>
+            <p class="toolbar-caption">工具栏用于切换数据表、选择展示列，并可直接执行只读 SQLite 查询。</p>
+            <div class="table-tools admin-tools">
+                <div class="field">
+                    <label>选择数据表</label>
+                    <select id="tableSelect">
+                        <option value="mapping_base">mapping_base</option>
+                        <option value="mapping_style">mapping_style</option>
+                        <option value="mapping_rule">mapping_rule</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>选择展示列（勾选即生效）</label>
+                    <div id="columnChecklist" class="column-checklist"></div>
+                </div>
+                <div class="field sql-field">
+                    <label>执行 SQLite（仅 SELECT）</label>
+                    <input id="sqlInput" type="text" placeholder="例如：SELECT id, style_name FROM mapping_style ORDER BY id DESC">
+                </div>
+                <div class="field">
+                    <label>&nbsp;</label>
+                    <button class="btn btn-ghost" id="runSqlBtn">执行 SQL</button>
+                </div>
+                <div class="field">
+                    <label>&nbsp;</label>
+                    <button class="btn btn-success" id="addBtn">新增记录</button>
+                </div>
             </div>
-            <div id="tableContainer" class="table-wrap"></div>
+            <div id="tableContainer" class="table-wrap admin-table-wrap"></div>
         </section>
     </main>
 

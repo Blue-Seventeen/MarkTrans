@@ -8,7 +8,6 @@ const htmlPreview = document.getElementById('htmlPreview');
 const htmlSource = document.getElementById('htmlSource');
 const htmlViewToggleBtn = document.getElementById('htmlViewToggleBtn');
 const statusBar = document.getElementById('statusBar');
-const localMdFile = document.getElementById('localMdFile');
 let htmlViewMode = 'preview';
 
 function setStatus(text) {
@@ -64,16 +63,6 @@ async function runTranslate(mode) {
 document.getElementById('parseBtn').addEventListener('click', () => runTranslate('ast'));
 document.getElementById('convertBtn').addEventListener('click', () => runTranslate('all'));
 document.getElementById('loadByPathBtn').addEventListener('click', () => runTranslate('path'));
-
-document.getElementById('pickFileBtn').addEventListener('click', () => localMdFile.click());
-localMdFile.addEventListener('change', async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-    filePathInput.value = file.name;
-    const text = await file.text();
-    markdownInput.value = text;
-    setStatus('已加载本地文件到输入区');
-});
 
 document.getElementById('copyAstBtn').addEventListener('click', async () => {
     await navigator.clipboard.writeText(astOutput.value || '');
