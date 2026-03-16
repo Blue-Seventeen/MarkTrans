@@ -49,6 +49,7 @@ class ASTHtmlTranslator:
         """
         初始化转换器
         :param db_path: 存储解析规则的 SQlite 数据库路径
+        :param attachment_directory_path: 附件目录路径，针对那些需要定位附件的场景
         """
         self.db_path = db_path     # 规则数据库路径
         self.mapping_rules = []    # 存放所有映射规则 [{}]

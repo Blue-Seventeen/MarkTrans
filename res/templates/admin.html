@@ -6,7 +6,7 @@
     <title>规则与数据管理 - MarkTrans</title>
     <link rel="stylesheet" href="/style.css">
 </head>
-<body>
+<body data-theme="dark">
     <header class="top-nav">
         <div class="brand">MarkTrans</div>
         <nav class="nav-links">
@@ -15,11 +15,11 @@
             <a class="nav-link active" href="/admin">规则与数据管理</a>
             <a class="nav-link" href="/docs">系统说明</a>
         </nav>
-        <div class="pill">数据库管理</div>
+        <div id="activeStyleLabel" class="pill" role="button" tabindex="0">当前模式：深色（点此切换亮色）</div>
     </header>
 
-    <main class="page">
-        <section class="card">
+    <main class="page admin-page">
+        <section class="card admin-db-card">
             <h2>数据库可视化管理</h2>
             <p class="toolbar-caption">工具栏用于切换数据表、选择展示列，并可直接执行只读 SQLite 查询。</p>
             <div class="table-tools admin-tools">
@@ -62,6 +62,7 @@
         </div>
     </div>
 
+    <script src="/theme.js"></script>
     <script src="/admin.js"></script>
 </body>
 </html>

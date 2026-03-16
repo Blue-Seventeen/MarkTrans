@@ -1,5 +1,4 @@
 const styleSelect = document.getElementById('styleSelect');
-const activeStyleLabel = document.getElementById('activeStyleLabel');
 const markdownInput = document.getElementById('markdownInput');
 const filePathInput = document.getElementById('filePath');
 const imageDirInput = document.getElementById('imageDir');
@@ -24,20 +23,19 @@ async function fetchStyles() {
         option.textContent = `${item.style_name} (#${item.id})`;
         if (item.is_active === 1) {
             option.selected = true;
-            activeStyleLabel.textContent = `当前样式: ${item.style_name}`;
         }
         styleSelect.appendChild(option);
     });
 }
 
-async function runTranslate(mode) {
+async function runTranslate() {
     const payload = {
         content: markdownInput.value,
         filePath: filePathInput.value.trim(),
         imageDir: imageDirInput.value.trim(),
         styleId: Number(styleSelect.value || 1)
     };
-    setStatus(mode === 'ast' ? '正在解析 AST...' : '正在执行转换...');
+    setStatus('正在执行转换...');
     const start = performance.now();
     const resp = await fetch('/api/translate', {
         method: 'POST',
@@ -60,9 +58,29 @@ async function runTranslate(mode) {
     setStatus(`完成，耗时 ${cost} ms，AST 节点 ${(data.ast || []).length} 个`);
 }
 
-document.getElementById('parseBtn').addEventListener('click', () => runTranslate('ast'));
-document.getElementById('convertBtn').addEventListener('click', () => runTranslate('all'));
-document.getElementById('loadByPathBtn').addEventListener('click', () => runTranslate('path'));
+document.getElementById('pickPathBtn').addEventListener('click', async () => {
+    setStatus('正在打开本地选择窗口...');
+    const resp = await fetch('/api/path/pick', { method: 'POST' });
+    const data = await resp.json();
+    if (data.error) {
+        setStatus(`失败：${data.error}`);
+        alert(data.error);
+        return;
+    }
+    if (!data.path) {
+        setStatus('未选择路径');
+        return;
+    }
+    if (data.kind === 'file') {
+        filePathInput.value = data.path;
+        setStatus('已选择 Markdown 文件路径');
+        return;
+    }
+    imageDirInput.value = data.path;
+    setStatus('已选择附件目录路径');
+});
+document.getElementById('convertBtn').addEventListener('click', () => runTranslate());
+document.getElementById('loadByPathBtn').addEventListener('click', () => runTranslate());
 
 document.getElementById('copyAstBtn').addEventListener('click', async () => {
     await navigator.clipboard.writeText(astOutput.value || '');
@@ -107,8 +125,7 @@ styleSelect.addEventListener('change', async () => {
         return;
     }
     const name = styleSelect.options[styleSelect.selectedIndex].textContent.split(' (#')[0];
-    activeStyleLabel.textContent = `当前样式: ${name}`;
-    setStatus('已切换样式');
+    setStatus(`已切换样式：${name}`);
 });
 
 fetchStyles().then(() => setStatus('就绪'));

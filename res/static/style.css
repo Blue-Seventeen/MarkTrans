@@ -111,7 +111,7 @@ textarea {
     color: #ffffff;
 }
 
-#parseBtn,
+#pickPathBtn,
 #convertBtn {
     height: 36px;
     padding-top: 0;
@@ -310,6 +310,8 @@ textarea {
     font-size: 12px;
     background: #ecfeff;
     color: #0f766e;
+    cursor: pointer;
+    user-select: none;
 }
 
 .help-grid {
@@ -440,9 +442,25 @@ textarea {
     margin-top: 12px;
 }
 
+.admin-page {
+    height: calc(100vh - 62px);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.admin-db-card {
+    flex: 1;
+    min-height: 0;
+    margin-bottom: 0;
+    display: flex;
+    flex-direction: column;
+}
+
 .admin-table-wrap {
     overflow: auto;
-    max-height: 560px;
+    flex: 1;
+    min-height: 0;
     position: relative;
 }
 
@@ -566,4 +584,127 @@ textarea {
     max-height: 320px;
     overflow-y: auto;
     overflow-x: hidden;
+}
+
+body[data-theme="dark"] {
+    background: #0b1220;
+    color: #e2e8f0;
+}
+
+body[data-theme="dark"] .top-nav {
+    background: #020617;
+    color: #e2e8f0;
+    border-bottom: 1px solid #1e293b;
+}
+
+body[data-theme="dark"] .top-nav .nav-link {
+    color: #94a3b8;
+}
+
+body[data-theme="dark"] .top-nav .nav-link.active {
+    background: #1e293b;
+    color: #f8fafc;
+}
+
+body[data-theme="dark"] .field label,
+body[data-theme="dark"] .toolbar-caption {
+    color: #94a3b8;
+}
+
+body[data-theme="dark"] input[type="text"],
+body[data-theme="dark"] select,
+body[data-theme="dark"] textarea {
+    border: 1px solid #334155;
+    background: #0f172a;
+    color: #e2e8f0;
+}
+
+body[data-theme="dark"] .panel,
+body[data-theme="dark"] .card,
+body[data-theme="dark"] .table-wrap,
+body[data-theme="dark"] .rule-editor-wrap,
+body[data-theme="dark"] .modal-content,
+body[data-theme="dark"] .admin-scroll-table .operation-col,
+body[data-theme="dark"] .column-checklist {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+body[data-theme="dark"] .panel-header,
+body[data-theme="dark"] .data-table th,
+body[data-theme="dark"] .modal-header,
+body[data-theme="dark"] .admin-scroll-table thead .operation-col {
+    background: #111827;
+    border-color: #334155;
+    color: #e2e8f0;
+}
+
+body[data-theme="dark"] .data-table th,
+body[data-theme="dark"] .data-table td {
+    border-bottom: 1px solid #1f2937;
+}
+
+body[data-theme="dark"] .html-preview {
+    border-color: #334155;
+    background: #0b1220;
+    color: #e2e8f0;
+}
+
+body[data-theme="dark"] .status-bar {
+    border: 1px solid #1d4ed8;
+    background: #0f172a;
+    color: #bfdbfe;
+}
+
+body[data-theme="dark"] .flow .node {
+    background: #1e293b;
+    border: 1px solid #334155;
+    color: #e2e8f0;
+}
+
+body[data-theme="dark"] .hint-badge {
+    background: #082f49;
+    color: #bae6fd;
+    border: 1px solid #0ea5e9;
+}
+
+body[data-theme="dark"] .hint-tooltip {
+    border: 1px solid #1d4ed8;
+    background: #0f172a;
+    color: #bfdbfe;
+}
+
+body[data-theme="dark"] .check-item,
+body[data-theme="dark"] .sort-icon {
+    color: #94a3b8;
+}
+
+body[data-theme="dark"] .pill {
+    background: #1e293b;
+    color: #bfdbfe;
+}
+
+body[data-theme="light"] {
+    background: #f4f6f8;
+    color: #1f2937;
+}
+
+body[data-theme="light"] .top-nav {
+    background: #ffffff;
+    color: #0f172a;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+body[data-theme="light"] .top-nav .nav-link {
+    color: #475569;
+}
+
+body[data-theme="light"] .top-nav .nav-link.active {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+
+body[data-theme="light"] .pill {
+    background: #ecfeff;
+    color: #0f766e;
 }

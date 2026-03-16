@@ -9,10 +9,12 @@
 1. 在 `mapping_base` 表中新增解析规则，并标注 handler 字段
 2. 在 MarkdownASTParser 类中新增对应的处理方法，方法名与 handler 字段相同（需要设置特殊的 AST 节点类型）
 """
+import base64
 import sqlite3
 import re
 import json
 import sys
+import os
 from pathlib import Path
 
 # 设置更高的递归限制，防止在解析深层嵌套的 AST（如多层列表或引用）时报错
@@ -79,12 +81,14 @@ class MarkdownASTParser:
     Markdown AST 解析类
     主要功能：连接数据库加载解析规则，并根据规则将 Markdown 文本转换为 AST（抽象语法树） JSON 结构
     """
-    def __init__(self, db_path):
+    def __init__(self, db_path, attachment_directory_path = None):
         """
         初始化解析器
         :param db_path: 存储解析规则的 SQlite 数据库路径
+        :param attachment_directory_path: 附件目录路径, Obsidian 中存放图片等的专业目录
         """
         self.db_path = db_path    # 规则数据库路径
+        self.attachment_directory_path = attachment_directory_path  # 附件目录路径
         self.block_rules = []     # 存储所有块级元素的解析规则（如段落、列表、代码块）
         self.inline_rules = []    # 存储所有行内元素的解析规则（如粗体、链接、行内代码）
         self.load_rules_from_db() # 从数据库加载解析规则，并根据权重（weight 进行排序）
@@ -257,12 +261,18 @@ class MarkdownASTParser:
         """
         content = match.group(1)
         data = {}
+        # 1. 从内容中提取键值对
         for line in content.split('\n'):
             if ':' in line:
                 key, val = line.split(':', 1)
-                data[key.strip()] = val.strip()
+                data[key.strip()] = val.strip().strip('"')
         
-        # 2. 构建 AST 节点
+        # 2. 补全键值对
+        for key in ['url', 'title', 'description', 'host', 'favicon', 'image']:
+            if key not in data:
+                data[key] = ""
+
+        # 3. 构建 AST 节点
         token = {
             "type" : rule['handler'],
             "raw" : match.group(0),
@@ -741,7 +751,7 @@ class MarkdownASTParser:
         :return: 嵌入内容节点 & 消耗的字符长度
         """
         # 构造 AST 节点
-        target = match.group(1).split('#')[0] # 文件名称（包含后缀）
+        target = match.group(1).split('#')[0].split("|")[0] # 文件名称（包含后缀）
         filename = Path(target)
         # 从 target 中提取文件后缀（Markdown 文件可能没有后缀）
         embedType = filename.suffix if '.' in target else 'md'
@@ -756,6 +766,17 @@ class MarkdownASTParser:
             else:
                 width = int(match.group(1).split("|")[1].strip())
         
+        # 处理附件目录路径
+        if self.attachment_directory_path:
+            target = os.path.join(self.attachment_directory_path, filename) 
+        
+        # 判断如果目标是图片，则将图片转换成 base64 编码，用来方便后续处理
+        base64_encoded = ""
+        if embedType[1:] == "jpg" or embedType[1:] == "jpeg" or embedType[1:] == "png" or embedType[1:] == "gif":
+            with open(target, "rb") as image_file:
+                encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+                base64_encoded = f"data:image/{embedType[1:]};base64,{encoded_string}"
+
         token = {
             "type" : rule['handler'],
             "raw" : match.group(0),
@@ -764,6 +785,7 @@ class MarkdownASTParser:
             "align" : align,
             "width" : width,
             "height" : height,
+            "base64_encoded" : base64_encoded,
             "text" : filename.name
         }
         return token, len(match.group(0))

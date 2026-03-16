@@ -306,6 +306,29 @@ def update_table_row(table_name):
     return jsonify({'success': True})
 
 
+@app.route('/api/path/pick', methods=['POST'])
+def pick_local_path():
+    try:
+        from tkinter import Tk, filedialog
+        root = Tk()
+        root.withdraw()
+        root.attributes('-topmost', True)
+        file_path = filedialog.askopenfilename(
+            title='选择 Markdown 文件',
+            filetypes=[('Markdown Files', '*.md *.markdown *.txt'), ('All Files', '*.*')]
+        )
+        if file_path:
+            root.destroy()
+            return jsonify({'kind': 'file', 'path': file_path})
+        folder_path = filedialog.askdirectory(title='选择附件目录')
+        root.destroy()
+        if folder_path:
+            return jsonify({'kind': 'folder', 'path': folder_path})
+        return jsonify({'kind': 'none', 'path': ''})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/translate', methods=['POST'])
 def translate():
     global CURRENT_IMAGE_DIR
@@ -336,8 +359,12 @@ def translate():
         cursor.execute("UPDATE mapping_style SET is_active = 1 WHERE id = ?", (style_id,))
         conn.commit()
     conn.close()
+    
+    if CURRENT_IMAGE_DIR != None:
+        parser = MarkdownASTParser(DB_FILE, attachment_directory_path=CURRENT_IMAGE_DIR)
+    else:
+        parser = MarkdownASTParser(DB_FILE)
 
-    parser = MarkdownASTParser(DB_FILE)
     ast_tokens = parser.parse(markdown_text, 'block')
     translator = ASTHtmlTranslator(DB_FILE)
     html_content = translator.translate(ast_tokens)
