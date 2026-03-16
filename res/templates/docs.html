@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系统说明 - MarkTrans</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <header class="top-nav">
+        <div class="brand">MarkTrans</div>
+        <nav class="nav-links">
+            <a class="nav-link" href="/">转换工作台</a>
+            <a class="nav-link" href="/styles">风格管理</a>
+            <a class="nav-link" href="/admin">规则与数据管理</a>
+            <a class="nav-link active" href="/docs">系统说明</a>
+        </nav>
+        <div class="pill">帮助</div>
+    </header>
+
+    <main class="page">
+        <section class="card">
+            <h2>转换流程</h2>
+            <div class="flow">
+                <div class="node">Markdown 输入</div>
+                <div class="node">MarkdownASTParser</div>
+                <div class="node">AST 输出</div>
+                <div class="node">ASTHtmlTranslator</div>
+                <div class="node">HTML 输出</div>
+            </div>
+        </section>
+
+        <section class="help-grid">
+            <article class="card">
+                <h2>数据表关系</h2>
+                <p>mapping_style 负责风格状态与启用逻辑。</p>
+                <p>mapping_rule 定义 AST 到 HTML 的匹配与转换规则。</p>
+                <p>mapping_base 维护解析基础元素。</p>
+            </article>
+            <article class="card">
+                <h2>规则编写提示</h2>
+                <p>matching_rule 使用受控表达式，允许 token 变量及 lower()。</p>
+                <p>html_output 使用 §...§ 占位符，支持递归节点渲染。</p>
+                <p>可通过规则权重控制命中优先级。</p>
+            </article>
+        </section>
+    </main>
+</body>
+</html>

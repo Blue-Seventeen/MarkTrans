@@ -3,69 +3,77 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Obsidian to WeChat Converter</title>
+    <title>转换工作台 - MarkTrans</title>
     <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-    <div class="container">
-        <div class="sidebar">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <h2>配置</h2>
-                <a href="/admin" style="font-size: 14px; text-decoration: none; color: #07c160;">管理数据库</a>
-            </div>
-            <div class="form-group">
-                <label for="filePath">Markdown 文件路径 (可选):</label>
-                <input type="text" id="filePath" placeholder="例如: G:\MyNotes\Post.md">
-            </div>
-            <div class="form-group">
-                <label for="imageDir">本地图片根目录 (可选, 默认同文件目录):</label>
-                <input type="text" id="imageDir" placeholder="例如: G:\MyNotes\Attachments">
-            </div>
-            <div class="form-group">
-                <button id="translateBtn" class="btn-primary">读取并转换</button>
-            </div>
-            
-            <h3>或直接输入 Markdown</h3>
-            <textarea id="markdownInput" placeholder="在此粘贴 Obsidian 内容..."></textarea>
-        </div>
-        
-        <div class="preview-area">
-            <div class="preview-header">
-                <h3>微信公众号预览</h3>
-            </div>
-            <div id="previewContent" class="wechat-content">
-                <!-- Rendered HTML will appear here -->
-            </div>
-        </div>
-    </div>
+    <header class="top-nav">
+        <div class="brand">MarkTrans</div>
+        <nav class="nav-links">
+            <a class="nav-link active" href="/">转换工作台</a>
+            <a class="nav-link" href="/styles">风格管理</a>
+            <a class="nav-link" href="/admin">规则与数据管理</a>
+            <a class="nav-link" href="/docs">系统说明</a>
+        </nav>
+        <div id="activeStyleLabel" class="pill">当前样式: -</div>
+    </header>
 
-    <script>
-        document.getElementById('translateBtn').addEventListener('click', async () => {
-            const content = document.getElementById('markdownInput').value;
-            const filePath = document.getElementById('filePath').value;
-            const imageDir = document.getElementById('imageDir').value;
-            
-            const response = await fetch('/api/translate', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ content, filePath, imageDir })
-            });
-            
-            const data = await response.json();
-            if (data.error) {
-                alert('Error: ' + data.error);
-                return;
-            }
-            
-            document.getElementById('previewContent').innerHTML = data.html;
-            
-            // If file was loaded, update textarea
-            if (data.loadedContent) {
-                document.getElementById('markdownInput').value = data.loadedContent;
-            }
-        });
-    </script>
+    <main class="page workbench-page">
+        <section class="toolbar">
+            <div class="field">
+                <label>Markdown 文件路径</label>
+                <input id="filePath" type="text" placeholder="例如 G:\Obsidian\notes\post.md">
+            </div>
+            <div class="field">
+                <label>附件目录路径</label>
+                <input id="imageDir" type="text" placeholder="例如 G:\Obsidian\attachments">
+            </div>
+            <div class="field">
+                <label>转换样式</label>
+                <select id="styleSelect"></select>
+            </div>
+            <button class="btn btn-primary" id="parseBtn">解析 AST</button>
+            <button class="btn btn-success" id="convertBtn">一键转换</button>
+        </section>
+
+        <section class="workspace-grid">
+            <article class="panel">
+                <div class="panel-header">
+                    <span>Markdown 输入</span>
+                    <button class="btn btn-ghost" id="loadByPathBtn">按路径读取</button>
+                </div>
+                <div class="panel-body">
+                    <textarea id="markdownInput" class="editor" placeholder="输入 Markdown 内容"></textarea>
+                </div>
+            </article>
+
+            <article class="panel">
+                <div class="panel-header">
+                    <span>AST 输出</span>
+                    <button class="btn btn-ghost" id="copyAstBtn">复制</button>
+                </div>
+                <div class="panel-body">
+                    <textarea id="astOutput" class="json-view" readonly></textarea>
+                </div>
+            </article>
+
+            <article class="panel">
+                <div class="panel-header">
+                    <span>HTML 输出</span>
+                    <div style="display:flex; gap:8px;">
+                        <button class="btn btn-ghost" id="htmlViewToggleBtn">切换到源码</button>
+                        <button class="btn btn-ghost" id="copyHtmlBtn">复制当前视图</button>
+                    </div>
+                </div>
+                <div class="panel-body">
+                    <div id="htmlPreview" class="html-preview"></div>
+                    <textarea id="htmlSource" class="html-source hidden" readonly></textarea>
+                </div>
+            </article>
+        </section>
+
+        <section id="statusBar" class="status-bar">状态：等待输入</section>
+    </main>
+    <script src="/workbench.js"></script>
 </body>
 </html>
