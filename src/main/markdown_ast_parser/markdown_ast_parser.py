@@ -587,10 +587,10 @@ class MarkdownASTParser:
         """
         # 构造 AST 节点信息
         token = {
-            "type" : rule['handler'],
-            "raw" : match.group(0),
-            "depth": len(match.group(0).split(' ')[0]),
-            "text": match.group(1),
+            "type" : rule['handler'],   # 标题节点类型 
+            "raw" : match.group(0),     # 标题原始内容
+            "depth": len(match.group(0).split(' ')[0]),  # 统计 # 的数量，确定标题深度
+            "text": match.group(1),                      # 拿到标题内容
             "tokens": self.parse(match.group(1), 'inline')  # 标题内容可能包含行内样式（如粗体），递归调用 parse
         }
         return token, len(match.group(0))

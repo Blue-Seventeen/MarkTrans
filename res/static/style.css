@@ -65,7 +65,7 @@ a {
 
 .toolbar {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr auto auto;
+    grid-template-columns: 2fr 2fr 1.2fr auto auto auto;
     gap: 10px;
 }
 
@@ -111,12 +111,14 @@ textarea {
     color: #ffffff;
 }
 
-#pickPathBtn,
+#pickFileBtn,
+#pickImageDirBtn,
 #convertBtn {
     height: 36px;
     padding-top: 0;
     padding-bottom: 0;
     align-self: end;
+    white-space: nowrap;
 }
 
 .btn-danger {

@@ -58,9 +58,14 @@ async function runTranslate() {
     setStatus(`完成，耗时 ${cost} ms，AST 节点 ${(data.ast || []).length} 个`);
 }
 
-document.getElementById('pickPathBtn').addEventListener('click', async () => {
-    setStatus('正在打开本地选择窗口...');
-    const resp = await fetch('/api/path/pick', { method: 'POST' });
+async function pickLocalPath(kind) {
+    const label = kind === 'file' ? '本地文件' : '附件目录';
+    setStatus(`正在打开${label}选择窗口...`);
+    const resp = await fetch('/api/path/pick', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ picker: kind })
+    });
     const data = await resp.json();
     if (data.error) {
         setStatus(`失败：${data.error}`);
@@ -71,14 +76,17 @@ document.getElementById('pickPathBtn').addEventListener('click', async () => {
         setStatus('未选择路径');
         return;
     }
-    if (data.kind === 'file') {
+    if (kind === 'file') {
         filePathInput.value = data.path;
         setStatus('已选择 Markdown 文件路径');
         return;
     }
     imageDirInput.value = data.path;
     setStatus('已选择附件目录路径');
-});
+}
+
+document.getElementById('pickFileBtn').addEventListener('click', async () => pickLocalPath('file'));
+document.getElementById('pickImageDirBtn').addEventListener('click', async () => pickLocalPath('folder'));
 document.getElementById('convertBtn').addEventListener('click', () => runTranslate());
 document.getElementById('loadByPathBtn').addEventListener('click', () => runTranslate());
 

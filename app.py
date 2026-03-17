@@ -310,9 +310,26 @@ def update_table_row(table_name):
 def pick_local_path():
     try:
         from tkinter import Tk, filedialog
+        data = request.json or {}
+        picker = (data.get('picker') or '').strip().lower()
         root = Tk()
         root.withdraw()
         root.attributes('-topmost', True)
+        if picker == 'file':
+            file_path = filedialog.askopenfilename(
+                title='选择 Markdown 文件',
+                filetypes=[('Markdown Files', '*.md *.markdown *.txt'), ('All Files', '*.*')]
+            )
+            root.destroy()
+            if file_path:
+                return jsonify({'kind': 'file', 'path': file_path})
+            return jsonify({'kind': 'none', 'path': ''})
+        if picker == 'folder':
+            folder_path = filedialog.askdirectory(title='选择附件目录')
+            root.destroy()
+            if folder_path:
+                return jsonify({'kind': 'folder', 'path': folder_path})
+            return jsonify({'kind': 'none', 'path': ''})
         file_path = filedialog.askopenfilename(
             title='选择 Markdown 文件',
             filetypes=[('Markdown Files', '*.md *.markdown *.txt'), ('All Files', '*.*')]

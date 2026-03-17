@@ -1,0 +1,17 @@
+﻿MarkTrans/
+├── doc/        # 存放一些开发文档
+├── res/        # 存放资源类文件
+│   ├── images/         # 存放图片类文件
+│   ├── static/         # 存放前端需要的一些 js 和 css 文件
+│   ├── templates/      # 存放前端界面的模板 html 文件
+│   ├── database.db     #（核心）里面存放了各种转换规则
+│   └── database_template.db    # （核心）这个是模板数据库，如果 database.db 的原始内容不幸被修改，可以利用这个数据库恢复
+├── src/        # 存放代码类资源
+│   ├── main/    # 存放主代码类资源（项目的核心代码）
+│   │   ├── ast_html_translator/    # （核心）该文件夹的代码主要通过读取 database.db 将 AST 转换为 HTML 格式
+│   │   └── markdown_ast_parser/    # （核心）该文件夹的代码主要通过读取 database.db 将 Markdown 转换为 AST 格式
+│   └── test/    # 存放测试类代码资源（主要是测试 main 中的代码能不能完成预期工作）
+│       ├── ast_html_translator/    # 用于测试 main 中的 ast_html_translator
+│       └── markdown_ast_parser/    # 用于测试 main 中的 markdown_ast_parser
+├── app.py      # Web 服务页面，为了展现功能才随便写的网页
+└──  database.py # 数据库服务，它可以帮你根据 database_template.db 重置 database.db
