@@ -520,7 +520,7 @@ class MarkdownASTParser:
             elif "-:" in align.strip():
                 align_list.append("right")
             else:
-                align_list.append("none")
+                align_list.append("center")
 
         # 3. 解析 title_row 单元格中的标题内容格式
         def parse_row(row_content):
@@ -558,12 +558,11 @@ class MarkdownASTParser:
         for row in content_rows: 
             row_list = []
             row_cell_list = parse_row(row) ## 4.2 将 content_rows 中每行拆分为多个单元格
-            print(row_cell_list)
             for cell in row_cell_list:     ## 4.3 调用行内解析器解析每个单元格的内容
                 row_list.append(self.parse(cell, 'inline'))
             ## 4.3 将当前行解析后的单元格列表添加到 rows 中
             rows.append(row_list)
-
+        
         # 构造 AST 节点信息
         token = {
             "type" : rule['handler'],

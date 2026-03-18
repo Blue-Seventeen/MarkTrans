@@ -283,7 +283,33 @@ class ASTHtmlTranslator:
         :param token : AST 中对应节点
         :param rule_list : 对应的规则（可能有很多条） [{}] 
         """
-        return self._render_easy(token = token, rule_list = rule_list)
+        html_output_template = "" # 存放最终的渲染结果的
+        # 1. 遍历 rule_list 列表，拿到表格各部分的渲染模板
+        render_template_dict = {}
+        for rule in rule_list:
+            render_template_dict[rule['style_rule_name']] = rule['html_output']
+        
+        # 2. 从内到外依次渲染出表格各个部分
+        tr_html = ""
+        for row in token["rows"] :   # 定位到每一行
+            ## 2.1 渲染 td  => 一个单元格
+            td_html = ""
+            for cell in row:         # 定位到每一个单元格, cell 中存放的是一个列表，代表构成该单元格的样式集合
+                text_html = self.translate(cell) # 递归翻译该单元格的内容
+                td_html += render_template_dict['表格 — <td>'].replace('§text§', text_html) # 替换 §text§ 为翻译后的内容
+            ## 2.2 渲染 tr => 一行
+            tr_html += render_template_dict['表格 — <tr>'].replace('§td§', td_html) # 替换 §td§ 为翻译后的内容
+        
+        ## 2.3 渲染 th
+        th_html = ""
+        for cell in token["header"]:         # 定位到每一个单元格, cell 中存放的是一个列表，代表构成该单元格的样式集合
+            text_html = self.translate(cell) # 递归翻译该单元格的内容
+            th_html += render_template_dict['表格 — <th>'].replace('§text§', text_html) # 替换 §text§ 为翻译后的内容
+        
+        ## 2.4 渲染最终的表格
+        html_output_template = render_template_dict['表格 — <table>'].replace('§表格 — <th>§', th_html).replace('§表格 — <tr>§', tr_html) # 替换 §th§ 和 §tr§ 为翻译后的内容
+
+        return html_output_template
    
     def _render_heading(self, token, rule_list):
         """

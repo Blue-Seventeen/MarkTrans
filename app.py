@@ -35,6 +35,11 @@ def normalize_rule_name(conn, style_rule_name):
 
 
 @app.route('/')
+def home():
+    return render_template('docs.html')
+
+
+@app.route('/workbench')
 def index():
     return render_template('index.html')
 
@@ -52,6 +57,17 @@ def admin():
 @app.route('/docs')
 def docs():
     return render_template('docs.html')
+
+
+@app.route('/docs/en')
+def docs_en():
+    return render_template('docs_en.html')
+
+
+@app.route('/doc/images/<path:filename>')
+def serve_doc_images(filename):
+    """Serve images from doc/images directory"""
+    return send_from_directory('doc/images', filename)
 
 
 @app.route('/api/style/list', methods=['GET'])

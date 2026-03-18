@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="360" viewBox="0 0 1400 360">
+  <defs>
+    <linearGradient id="v3bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0d1117"/>
+      <stop offset="100%" stop-color="#101926"/>
+    </linearGradient>
+    <linearGradient id="v3line" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#3fb950"/>
+      <stop offset="100%" stop-color="#58a6ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="1400" height="360" rx="24" fill="url(#v3bg)"/>
+  <rect x="34" y="34" width="1332" height="292" rx="18" fill="none" stroke="#2d3748"/>
+  <path d="M570 103h260" stroke="url(#v3line)" stroke-width="6" stroke-linecap="round"/>
+  <text x="700" y="170" fill="#f0f6fc" font-size="92" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-weight="700">MarkTrans</text>
+  <text x="700" y="218" fill="#8b949e" font-size="30" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif">Markdown → AST → HTML</text>
+  <rect x="548" y="240" width="304" height="56" rx="10" fill="#0f2236" stroke="#58a6ff"/>
+  <text x="700" y="276" fill="#c9e7ff" font-size="24" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif">Rule Engine Powered</text>
+</svg>
