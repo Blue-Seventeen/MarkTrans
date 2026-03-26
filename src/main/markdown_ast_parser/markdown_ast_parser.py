@@ -348,6 +348,13 @@ class MarkdownASTParser:
         c_state = "collapse" if match.group(2) == "-" else "expand"   # 调用块的状态 — 折叠(collapse)，展开（expand）
         c_title = match.group(3).strip() if match.group(3) else None  # 调用块标题
         c_content = match.group(4) if match.group(4) else None        # 调用块内容
+        
+        # 2. 去掉 content 中每行开头的 >，每行仅删除一个
+        if c_content != None:
+            # 2.1 去掉 content 中每行开头的 >，每行仅删除一个
+            c_content = "\n".join([line[1:] if line.startswith(">") else line for line in c_content.split("\n")])
+            # 2.2 去掉每行开头的空格
+            c_content = "\n".join([line.lstrip() for line in c_content.split("\n")])
 
         # 构造 token 节点
         token = {
@@ -355,7 +362,7 @@ class MarkdownASTParser:
             'raw' : match.group(0),
             'calloutType' : c_type,
             'fold' : c_state,
-            'title' : self.parse(c_title, 'inline') if c_title != None else None, # 标题中可能隐藏行内样式
+            'title' : self.parse(c_title, 'inline') if c_title != None else self.parse(c_type.title(), 'inline'), # 标题中可能隐藏行内样式
             'text' : c_content,
             # Callout 内容可能包含块级元素（如列表），递归调用 parse (块级解析)
             "tokens": self.parse(c_content) 
@@ -474,7 +481,7 @@ class MarkdownASTParser:
                         "type" : "list_item",
                         "listType" : "ordered_list",
                         "indentationLevel" : int(parse_indent(raw)[0]),
-                        "order" : int(order),
+                        "order" : str(int(order)),
                         "raw" : raw,
                         "text" : text,
                         "tokens" : self.parse(text)
@@ -647,8 +654,8 @@ class MarkdownASTParser:
             "type" : rule['handler'],
             "raw" : raw,
             "text" : text,
-            "order" : footNoteId,
-            "token" : self.parse(text, parse_type='inline')
+            "order" : str(footNoteId),
+            "tokens" : self.parse(text, parse_type='inline')
         }
         return token, len(raw)
 
@@ -735,7 +742,7 @@ class MarkdownASTParser:
             "type" : rule['handler'],
             "raw" : match.group(0),
             "text" : match.group(0),
-            "order" : int(footNoteId),
+            "order" : str(int(footNoteId)),
             
         }
         return token, len(match.group(0))
@@ -767,7 +774,8 @@ class MarkdownASTParser:
         
         # 处理附件目录路径
         if self.attachment_directory_path:
-            target = os.path.join(self.attachment_directory_path, filename) 
+            attachment_name = Path(str(target).replace("\\", "/")).name
+            target = os.path.join(self.attachment_directory_path, attachment_name)
         
         # 判断如果目标是图片，则将图片转换成 base64 编码，用来方便后续处理
         base64_encoded = ""
@@ -785,7 +793,8 @@ class MarkdownASTParser:
             "width" : width,
             "height" : height,
             "base64_encoded" : base64_encoded,
-            "text" : filename.name
+            "text" : filename.name,
+            "src" : "" # 云资源地址
         }
         return token, len(match.group(0))
     

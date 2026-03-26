@@ -22,18 +22,6 @@ def get_table_columns(conn, table_name):
     return [row[1] for row in cursor.fetchall()]
 
 
-def normalize_rule_name(conn, style_rule_name):
-    candidate = (style_rule_name or "").strip() or "rule"
-    cursor = conn.cursor()
-    seq = 1
-    while True:
-        cursor.execute("SELECT 1 FROM mapping_rule WHERE style_rule_name = ? LIMIT 1", (candidate,))
-        if cursor.fetchone() is None:
-            return candidate
-        seq += 1
-        candidate = f"{style_rule_name}_{seq}"
-
-
 @app.route('/')
 def home():
     return render_template('docs.html')
@@ -127,11 +115,10 @@ def clone_style():
 
         for rule in base_rules:
             original_name = rule["style_rule_name"]
-            new_rule_name = normalize_rule_name(conn, f"{original_name}_{new_style_id}")
             cursor.execute("""
                 INSERT INTO mapping_rule (style_id, style_rule_name, ast_input, matching_rule, html_output, render_name, weight)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (new_style_id, new_rule_name, rule["ast_input"], rule["matching_rule"], rule["html_output"], rule["render_name"], rule["weight"]))
+            """, (new_style_id, original_name, rule["ast_input"], rule["matching_rule"], rule["html_output"], rule["render_name"], rule["weight"]))
 
         conn.commit()
     except Exception as e:

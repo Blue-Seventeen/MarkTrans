@@ -209,22 +209,37 @@ class ASTHtmlTranslator:
         for rule in rule_list:
             # 1.1 执行 matching_rule 并判断是否满足，如果满足则按照 html_output 进行解析
             if self._save_eval_rule(rule['matching_rule'], token):
-                # 1.1.1 拿到 html_output 模板
-                html_output_template = rule['html_output']
-                # 1.1.2 从 html_output_template 中提取出所有被 § 包裹的内容
-                pattern = r'(§(.*?)§)'    # 非贪婪匹配 §...§ 之间的内容（最小匹配）
-                matches = re.findall(pattern, rule['html_output'])
-                # 1.1.3 替换 §...§ 为对应的值
-                for match in matches:
-                    # 如果 match 为 §token['tokens']§ 证明需要递归翻译
-                    if match[1] == "token['tokens']" :
-                        html_output_template = html_output_template.replace(match[0], self.translate(token['tokens']))
-                    else:
-                        html_output_template = html_output_template.replace(match[0], self._save_get_token(match[1], token))
-                # 1.1.4 返回渲染结果
-                return html_output_template 
+                return self._render_html_template(token, rule['html_output'])
         # 2. 如果没有一条满足，返回默认渲染
         return self._render_default(token)
+
+    def _render_html_template(self, token, html_output_template):
+        """
+        渲染 html_output 模板，支持原始 HTML 占位与转义文本占位共存。
+        """
+        pattern = r'(§(.*?)§)'
+        matches = re.findall(pattern, html_output_template)
+        for match in matches:
+            expr = match[1]
+            if expr == "token['tokens']":
+                replacement = self.translate(token['tokens'])
+            elif expr == "token['inlineTokensHtml']":
+                replacement = token.get('inlineTokensHtml', '')
+            else:
+                replacement = html.escape(str(self._save_get_token(expr, token)))
+            html_output_template = html_output_template.replace(match[0], replacement)
+        return html_output_template
+
+    def _build_inline_tokens_html(self, token):
+        """
+        将列表项内容尽量展开为单段落内部 HTML，便于在同一行中绘制符号与正文。
+        """
+        translated_html = self.translate(token.get('tokens', []))
+        stripped_html = translated_html.strip()
+        paragraph_match = re.fullmatch(r'<p\b[^>]*>(.*)</p>', stripped_html, flags=re.DOTALL)
+        if paragraph_match:
+            return paragraph_match.group(1)
+        return stripped_html
 
     def _render_default(self, token):
         """
@@ -251,7 +266,27 @@ class ASTHtmlTranslator:
         :param token : AST 中对应节点
         :param rule_list : 对应的规则（可能有很多条） [{}] 
         """
-        return self._render_easy(token = token, rule_list = rule_list)
+        html_output_template = "" # 存放最终的渲染结果的
+        # 1. 遍历 rule_list 列表，拿到代码块部分的渲染模板
+        render_template_dict = {}
+        for rule in rule_list:
+            render_template_dict[rule['style_rule_name']] = rule['html_output']
+        
+        # 2. 从内到外依次渲染出代码块各个部分
+        span_html = ""
+        for index, row in enumerate(token["text"].split("\n")):
+            # 2.1 渲染改行，进行 HTML 转义
+            row_html = html.escape(row)
+            # 2.2 渲染改行的样式
+            span_html += render_template_dict['普通代码块 — 内容'].replace("§普通代码块 — 行内容§", row_html)
+            # 2.3 渲染改行的换行符
+            if index < len(token["text"].split("\n")) - 1:
+                span_html += render_template_dict['普通代码块 — 换行符']
+        
+        # 3. 拼接外围框架
+        html_output_template = render_template_dict['普通代码块 — 框架'].replace("§普通代码块 — 内容§", span_html)
+
+        return html_output_template
 
     def _render_callout(self, token, rule_list):
         """
@@ -259,7 +294,27 @@ class ASTHtmlTranslator:
         :param token : AST 中对应节点
         :param rule_list : 对应的规则（可能有很多条） [{}] 
         """
-        return self._render_easy(token = token, rule_list = rule_list)
+        html_output_template = "" # 存放最终的渲染结果
+        # 1. 遍历 rule_list 列表，拿到标注块部分的渲染模板
+        render_output_html = ""
+        for rule in rule_list:
+            if self._save_eval_rule(rule['matching_rule'], token):
+                render_output_html = rule['html_output']
+        
+        # 2. 渲染 title
+        html_output_template = render_output_html
+        # 2.1 从 html_output_template 中提取出所有被 § 包裹的内容
+        pattern = r'(§(.*?)§)'    # 非贪婪匹配 §...§ 之间的内容（最小匹配）
+        matches = re.findall(pattern, rule['html_output'])
+        # 2.2 替换 §...§ 为对应的值
+        for match in matches:
+            # 如果 match 为 §token['title']§ 证明需要递归翻译
+            if match[1] == "token['title']":
+                html_output_template = html_output_template.replace(match[0], self.translate(token['title']))
+            else:
+                html_output_template = html_output_template.replace(match[0], self.translate(token['tokens']))
+        return html_output_template
+        
 
     def _render_blockQuote(self, token, rule_list):
         """
@@ -269,13 +324,26 @@ class ASTHtmlTranslator:
         """
         return self._render_easy(token = token, rule_list = rule_list)
     
+    def _render_list(self, token, rule_list):
+        """
+        渲染列表框架
+        :param toen : AST 中对应节点
+        :param rule_list : 
+        """
+        return self._render_easy(token = token, rule_list = rule_list)
+
     def _render_list_item(self, token, rule_list):
         """
         渲染列表项
         :param token : AST 中对应节点
         :param rule_list : 对应的规则（可能有很多条） [{}] 
         """
-        return self._render_easy(token = token, rule_list = rule_list)
+        render_token = dict(token)
+        render_token['inlineTokensHtml'] = self._build_inline_tokens_html(token)
+        for rule in rule_list:
+            if self._save_eval_rule(rule['matching_rule'], render_token):
+                return self._render_html_template(render_token, rule['html_output'])
+        return self._render_default(token)
     
     def _render_table(self, token, rule_list):
         """
@@ -375,7 +443,7 @@ class ASTHtmlTranslator:
         :param token : AST 中对应节点
         :param rule_list : 对应的规则（可能有很多条） [{}] 
         """
-        return self._render_easy(token = token, rule_list = rule_list)
+        return ""
     
     def _render_footNoteSign(self, token, rule_list):
         """
